@@ -1,10 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { LayoutDashboard, PlusCircle, List, Settings, Repeat, Landmark } from "lucide-react";
+import { usePathname, useRouter } from "next/navigation";
+import { LayoutDashboard, PlusCircle, List, Settings, Repeat, Landmark, Users, LogOut } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { useEffect, useState } from "react";
 
 const navItems = [
   { href: "/",          label: "Übersicht",   icon: LayoutDashboard, mobileVisible: true  },
@@ -13,10 +14,26 @@ const navItems = [
   { href: "/recurring", label: "Regelmäßig",  icon: Repeat,          mobileVisible: true  },
   { href: "/accounts",  label: "Konten",      icon: Landmark,        mobileVisible: false },
   { href: "/settings",  label: "Kategorien",  icon: Settings,        mobileVisible: true  },
+  { href: "/users",     label: "Benutzer",    icon: Users,           mobileVisible: false },
 ];
 
 export function Nav() {
   const pathname = usePathname();
+  const router = useRouter();
+  const [username, setUsername] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetch("/api/auth/session")
+      .then((r) => r.json())
+      .then((d) => setUsername(d.user?.username ?? null))
+      .catch(() => {});
+  }, [pathname]);
+
+  async function handleLogout() {
+    await fetch("/api/auth/logout", { method: "POST" });
+    router.push("/login");
+    router.refresh();
+  }
 
   return (
     <>
@@ -52,6 +69,21 @@ export function Nav() {
                 </nav>
                 <div className="w-px h-5 bg-stone-800 mx-2" />
                 <ThemeToggle />
+                {username && (
+                  <>
+                    <div className="w-px h-5 bg-stone-800 mx-2" />
+                    <span className="text-[12px] text-stone-500 tracking-wide hidden lg:block">
+                      {username}
+                    </span>
+                    <button
+                      onClick={handleLogout}
+                      title="Abmelden"
+                      className="ml-1 p-1.5 rounded-md text-stone-500 hover:text-red-400 hover:bg-red-400/10 transition-colors"
+                    >
+                      <LogOut className="w-3.5 h-3.5" />
+                    </button>
+                  </>
+                )}
               </div>
             </div>
           </div>
@@ -71,11 +103,20 @@ export function Nav() {
                 Ausgaben<span className="text-amber-500/80">·</span>Tracker
               </span>
             </Link>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2">
               <span className="text-[12px] text-stone-500 tracking-wide">
                 {navItems.find((n) => n.href === pathname)?.label ?? ""}
               </span>
               <ThemeToggle />
+              {username && (
+                <button
+                  onClick={handleLogout}
+                  title="Abmelden"
+                  className="p-1.5 rounded-md text-stone-500 hover:text-red-400 hover:bg-red-400/10 transition-colors"
+                >
+                  <LogOut className="w-3.5 h-3.5" />
+                </button>
+              )}
             </div>
           </div>
         </div>

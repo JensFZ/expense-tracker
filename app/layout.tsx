@@ -3,6 +3,7 @@ import { DM_Sans, Playfair_Display, IBM_Plex_Mono } from "next/font/google";
 import "./globals.css";
 import { Nav } from "@/components/nav";
 import { ThemeProvider } from "@/components/theme-provider";
+import { SetupGuard } from "@/components/users/setup-guard";
 
 const dmSans = DM_Sans({
   variable: "--font-dm-sans",
@@ -41,10 +42,12 @@ export default function RootLayout({
     >
       <body className="min-h-full flex flex-col">
         <ThemeProvider>
-          <Nav />
-          <main className="flex-1 max-w-6xl mx-auto w-full px-4 sm:px-6 py-8 lg:py-10 pb-24 sm:pb-10 lg:pb-10">
-            {children}
-          </main>
+          <SetupGuard>
+            <Nav />
+            <main className="flex-1 max-w-6xl mx-auto w-full px-4 sm:px-6 py-8 lg:py-10 pb-24 sm:pb-10 lg:pb-10">
+              {children}
+            </main>
+          </SetupGuard>
         </ThemeProvider>
       </body>
     </html>

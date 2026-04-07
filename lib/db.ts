@@ -1,6 +1,7 @@
 import Database from "better-sqlite3";
 import path from "path";
 import fs from "fs";
+import bcrypt from "bcryptjs";
 import { DEFAULT_CATEGORIES, type Category } from "./categories";
 
 export interface Account {
@@ -52,6 +53,19 @@ export interface SavingsEntry {
   date: string;
   note: string | null;
   created_at: string;
+}
+
+export interface User {
+  id: number;
+  username: string;
+  first_name: string;
+  last_name: string;
+  email: string;
+  created_at: string;
+}
+
+export interface UserWithHash extends User {
+  password_hash: string;
 }
 
 let db: Database.Database | null = null;
@@ -119,6 +133,16 @@ function getDb(): Database.Database {
       next_due    TEXT    NOT NULL,
       is_active   INTEGER NOT NULL DEFAULT 1,
       created_at  TEXT    DEFAULT (datetime('now'))
+    );
+
+    CREATE TABLE IF NOT EXISTS users (
+      id            INTEGER PRIMARY KEY AUTOINCREMENT,
+      username      TEXT    NOT NULL UNIQUE,
+      password_hash TEXT    NOT NULL,
+      first_name    TEXT    NOT NULL DEFAULT '',
+      last_name     TEXT    NOT NULL DEFAULT '',
+      email         TEXT    NOT NULL DEFAULT '',
+      created_at    TEXT    DEFAULT (datetime('now'))
     );
   `);
 
@@ -432,4 +456,66 @@ export function deleteAccount(id: number): { ok: boolean; reason?: string } {
   if (count > 0) return { ok: false, reason: `Konto hat ${count} Buchung${count !== 1 ? "en" : ""} und kann nicht gelöscht werden.` };
   getDb().prepare("DELETE FROM accounts WHERE id = ?").run(id);
   return { ok: true };
+}
+
+// ─── Users ────────────────────────────────────────────────────────────────────
+
+export function getUserCount(): number {
+  return (getDb().prepare("SELECT COUNT(*) as n FROM users").get() as { n: number }).n;
+}
+
+export function getAllUsers(): User[] {
+  return getDb()
+    .prepare("SELECT id, username, first_name, last_name, email, created_at FROM users ORDER BY id ASC")
+    .all() as User[];
+}
+
+export function getUserById(id: number): User | undefined {
+  return getDb()
+    .prepare("SELECT id, username, first_name, last_name, email, created_at FROM users WHERE id = ?")
+    .get(id) as User | undefined;
+}
+
+export function getUserByUsername(username: string): UserWithHash | undefined {
+  return getDb()
+    .prepare("SELECT * FROM users WHERE username = ?")
+    .get(username) as UserWithHash | undefined;
+}
+
+export function insertUser(
+  username: string, password: string,
+  first_name: string, last_name: string, email: string
+): User {
+  const password_hash = bcrypt.hashSync(password, 12);
+  const result = getDb()
+    .prepare("INSERT INTO users (username, password_hash, first_name, last_name, email) VALUES (?, ?, ?, ?, ?)")
+    .run(username, password_hash, first_name, last_name, email);
+  return getUserById(result.lastInsertRowid as number)!;
+}
+
+export function updateUser(
+  id: number, username: string,
+  first_name: string, last_name: string, email: string
+): User | undefined {
+  getDb()
+    .prepare("UPDATE users SET username = ?, first_name = ?, last_name = ?, email = ? WHERE id = ?")
+    .run(username, first_name, last_name, email, id);
+  return getUserById(id);
+}
+
+export function updateUserPassword(id: number, password: string): boolean {
+  const password_hash = bcrypt.hashSync(password, 12);
+  return getDb()
+    .prepare("UPDATE users SET password_hash = ? WHERE id = ?")
+    .run(password_hash, id).changes > 0;
+}
+
+export function deleteUser(id: number): boolean {
+  return getDb().prepare("DELETE FROM users WHERE id = ?").run(id).changes > 0;
+}
+
+export function verifyUserPassword(username: string, password: string): User | null {
+  const user = getUserByUsername(username);
+  if (!user) return null;
+  return bcrypt.compareSync(password, user.password_hash) ? getUserById(user.id)! : null;
 }
