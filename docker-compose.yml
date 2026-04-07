@@ -5,8 +5,11 @@ services:
     ports:
       - "3000:3000"
     volumes:
-      # Datenbankdatei außerhalb des Containers persistieren
-      - ./data:/app/data
+      # Named volume: sauber isoliert von der lokalen Entwicklungsdatenbank
+      - expense_data:/app/data
     environment:
       - NODE_ENV=production
       - PORT=3000
+
+volumes:
+  expense_data:

@@ -118,10 +118,14 @@ services:
     ports:
       - "3000:3000"
     volumes:
-      - ./data:/app/data
+      # Named volume — isoliert von der lokalen Entwicklungsdatenbank
+      - expense_data:/app/data
     environment:
       - NODE_ENV=production
       - PORT=3000
+
+volumes:
+  expense_data:
 ```
 
 ```bash
