@@ -15,7 +15,13 @@ export async function GET(request: NextRequest) {
     if (category && category !== "all") expenses = expenses.filter((e) => e.category === category);
     if (search) {
       const q = search.toLowerCase();
-      expenses = expenses.filter((e) => e.note?.toLowerCase().includes(q) || e.category.toLowerCase().includes(q));
+      const qNormalized = q.replace(",", ".");
+      expenses = expenses.filter((e) =>
+        e.note?.toLowerCase().includes(q) ||
+        e.category.toLowerCase().includes(q) ||
+        e.company?.toLowerCase().includes(q) ||
+        e.amount.toString().includes(qNormalized)
+      );
     }
     if (from) expenses = expenses.filter((e) => e.date >= from);
     if (to)   expenses = expenses.filter((e) => e.date <= to);
@@ -30,7 +36,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { amount, category, date, note, type, account_id } = body;
+    const { amount, category, date, note, type, account_id, company } = body;
 
     if (!amount || !date) {
       return Response.json({ error: "Pflichtfelder fehlen" }, { status: 400 });
@@ -38,7 +44,7 @@ export async function POST(request: NextRequest) {
 
     const entryType = type === "income" ? "income" : "expense";
     const accountId = account_id ? Number(account_id) : null;
-    const expense = insertExpense(Number(amount), category || "", date, note || null, entryType, accountId);
+    const expense = insertExpense(Number(amount), category || "", date, note || null, entryType, accountId, company || null);
     return Response.json(expense, { status: 201 });
   } catch (err) {
     console.error(err);

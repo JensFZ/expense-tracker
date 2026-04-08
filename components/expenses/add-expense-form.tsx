@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useCategories } from "@/hooks/use-categories";
 import { useAccounts } from "@/hooks/use-accounts";
@@ -14,7 +14,7 @@ export function AddExpenseForm({
   expenseId,
   onSuccess,
 }: {
-  initialData?: { amount: string; category: string; date: string; note: string; type?: EntryType; accountId?: number | null };
+  initialData?: { amount: string; category: string; date: string; note: string; company?: string; type?: EntryType; accountId?: number | null };
   expenseId?: number;
   onSuccess?: () => void;
 }) {
@@ -30,12 +30,40 @@ export function AddExpenseForm({
     category: initialData?.category ?? "",
     date:     initialData?.date     ?? today,
     note:     initialData?.note     ?? "",
+    company:  initialData?.company  ?? "",
   });
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError]     = useState("");
+
+  // Company autocomplete state
+  const [companySuggestions, setCompanySuggestions] = useState<string[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const companyRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    fetch("/api/companies")
+      .then((r) => r.json())
+      .then((data: string[]) => setCompanySuggestions(data))
+      .catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (companyRef.current && !companyRef.current.contains(e.target as Node)) {
+        setShowSuggestions(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
   const isEditing = !!expenseId;
   const isIncome  = entryType === "income";
+
+  const filteredCompanies = form.company.trim()
+    ? companySuggestions.filter((c) => c.toLowerCase().includes(form.company.toLowerCase()))
+    : companySuggestions;
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -57,6 +85,7 @@ export function AddExpenseForm({
           category:   form.category || "",
           date:       form.date,
           note:       form.note || null,
+          company:    form.company || null,
           type:       entryType,
           account_id: accountId,
         }),
@@ -236,6 +265,42 @@ export function AddExpenseForm({
               maxLength={200}
               className="field-input text-[13px]" />
           </div>
+        )}
+      </div>
+
+      {/* Company autocomplete */}
+      <div ref={companyRef} className="relative">
+        <label className="block text-[11px] uppercase tracking-[0.1em] text-stone-500 mb-3">
+          Firma <span className="normal-case text-stone-700 tracking-normal">(optional)</span>
+        </label>
+        <input
+          type="text"
+          placeholder="z.B. Rewe, Amazon, …"
+          value={form.company}
+          onChange={(e) => setForm({ ...form, company: e.target.value })}
+          onFocus={() => setShowSuggestions(true)}
+          autoComplete="off"
+          maxLength={200}
+          className="field-input text-[13px] w-full"
+        />
+        {showSuggestions && filteredCompanies.length > 0 && (
+          <ul className="absolute z-20 left-0 right-0 mt-1 rounded-lg border border-stone-800 bg-stone-950 shadow-xl overflow-hidden">
+            {filteredCompanies.map((c) => (
+              <li key={c}>
+                <button
+                  type="button"
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    setForm({ ...form, company: c });
+                    setShowSuggestions(false);
+                  }}
+                  className="w-full text-left px-3 py-2 text-[13px] text-stone-300 hover:bg-stone-800 transition-colors"
+                >
+                  {c}
+                </button>
+              </li>
+            ))}
+          </ul>
         )}
       </div>
 

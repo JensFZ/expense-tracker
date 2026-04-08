@@ -27,6 +27,7 @@ export interface Expense {
   category: string;
   date: string;
   note: string | null;
+  company: string | null;
   type: "expense" | "income";
   account_id: number | null;
   external_id: string | null;
@@ -167,6 +168,9 @@ function getDb(): Database.Database {
     db.exec("ALTER TABLE expenses ADD COLUMN external_id TEXT");
     db.exec("CREATE UNIQUE INDEX IF NOT EXISTS idx_expenses_external_id ON expenses(external_id) WHERE external_id IS NOT NULL");
   }
+  if (!cols.includes("company")) {
+    db.exec("ALTER TABLE expenses ADD COLUMN company TEXT");
+  }
 
   // Seed default categories if empty
   const count = (db.prepare("SELECT COUNT(*) as n FROM categories").get() as { n: number }).n;
@@ -266,18 +270,25 @@ export function getMonthSpendingByCategory(): Record<string, number> {
   return Object.fromEntries(rows.map((r) => [r.category, r.total]));
 }
 
-export function insertExpense(amount: number, category: string, date: string, note: string | null, type: "expense" | "income" = "expense", accountId: number | null = null): Expense {
+export function insertExpense(amount: number, category: string, date: string, note: string | null, type: "expense" | "income" = "expense", accountId: number | null = null, company: string | null = null): Expense {
   const result = getDb()
-    .prepare("INSERT INTO expenses (amount, category, date, note, type, account_id) VALUES (?, ?, ?, ?, ?, ?)")
-    .run(amount, category, date, note, type, accountId);
+    .prepare("INSERT INTO expenses (amount, category, date, note, type, account_id, company) VALUES (?, ?, ?, ?, ?, ?, ?)")
+    .run(amount, category, date, note, type, accountId, company);
   return getExpenseById(result.lastInsertRowid as number)!;
 }
 
-export function updateExpense(id: number, amount: number, category: string, date: string, note: string | null, type: "expense" | "income" = "expense", accountId: number | null = null): Expense | undefined {
+export function updateExpense(id: number, amount: number, category: string, date: string, note: string | null, type: "expense" | "income" = "expense", accountId: number | null = null, company: string | null = null): Expense | undefined {
   getDb()
-    .prepare("UPDATE expenses SET amount = ?, category = ?, date = ?, note = ?, type = ?, account_id = ? WHERE id = ?")
-    .run(amount, category, date, note, type, accountId, id);
+    .prepare("UPDATE expenses SET amount = ?, category = ?, date = ?, note = ?, type = ?, account_id = ?, company = ? WHERE id = ?")
+    .run(amount, category, date, note, type, accountId, company, id);
   return getExpenseById(id);
+}
+
+export function getCompanySuggestions(): string[] {
+  const rows = getDb()
+    .prepare("SELECT DISTINCT company FROM expenses WHERE company IS NOT NULL AND company != '' ORDER BY company ASC")
+    .all() as { company: string }[];
+  return rows.map((r) => r.company);
 }
 
 export function insertExpenseWithExternalId(

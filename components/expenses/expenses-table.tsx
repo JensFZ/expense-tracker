@@ -320,6 +320,7 @@ export function ExpensesTable() {
                     <p className="text-[11px] text-stone-600 mt-0.5">
                       {isIncome ? "Einnahme · " : `${cat!.label} · `}
                       {format(parseISO(expense.date), "d. MMM yyyy", { locale: de })}
+                      {expense.company ? ` · ${expense.company}` : ""}
                     </p>
                   </div>
 
@@ -361,6 +362,9 @@ export function ExpensesTable() {
                   </th>
                   <th className="text-left text-[10px] uppercase tracking-[0.1em] text-stone-600 px-4 py-3">
                     Notiz
+                  </th>
+                  <th className="text-left text-[10px] uppercase tracking-[0.1em] text-stone-600 px-4 py-3 hidden lg:table-cell">
+                    Firma
                   </th>
                   <th
                     className="text-left text-[10px] uppercase tracking-[0.1em] text-stone-600 px-4 py-3 cursor-pointer hover:text-stone-400 transition-colors select-none"
@@ -431,6 +435,11 @@ export function ExpensesTable() {
                           {expense.note || <span className="text-stone-700 italic">–</span>}
                         </span>
                       </td>
+                      <td className="px-4 py-3.5 max-w-36 hidden lg:table-cell">
+                        <span className="text-[13px] text-stone-500 truncate block">
+                          {expense.company || <span className="text-stone-700 italic">–</span>}
+                        </span>
+                      </td>
                       <td className="px-4 py-3.5 whitespace-nowrap">
                         <span className="text-[13px] text-stone-500">
                           {format(parseISO(expense.date), "d. MMM yyyy", { locale: de })}
@@ -498,6 +507,7 @@ export function ExpensesTable() {
                   category: editingExpense.category,
                   date: editingExpense.date,
                   note: editingExpense.note ?? "",
+                  company: editingExpense.company ?? "",
                   type: editingExpense.type,
                   accountId: editingExpense.account_id,
                 }}

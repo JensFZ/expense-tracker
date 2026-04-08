@@ -23,7 +23,7 @@ export async function PUT(
   try {
     const { id } = await params;
     const body = await request.json();
-    const { amount, category, date, note, type, account_id } = body;
+    const { amount, category, date, note, type, account_id, company } = body;
 
     if (!amount || !date) {
       return Response.json({ error: "Pflichtfelder fehlen" }, { status: 400 });
@@ -31,7 +31,7 @@ export async function PUT(
 
     const entryType = type === "income" ? "income" : "expense";
     const accountId = account_id !== undefined ? (account_id ? Number(account_id) : null) : undefined;
-    const expense = updateExpense(Number(id), Number(amount), category || "", date, note || null, entryType, accountId ?? null);
+    const expense = updateExpense(Number(id), Number(amount), category || "", date, note || null, entryType, accountId ?? null, company || null);
     if (!expense) return Response.json({ error: "Nicht gefunden" }, { status: 404 });
     return Response.json(expense);
   } catch (err) {
