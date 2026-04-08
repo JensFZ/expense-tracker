@@ -13,11 +13,21 @@ import {
   Pencil,
   X,
   ChevronDown,
+  ChevronLeft,
+  ChevronRight,
   Loader2,
   AlertTriangle,
   TrendingUp,
 } from "lucide-react";
 import { AddExpenseForm } from "./add-expense-form";
+import { ImportDialog } from "./import-dialog";
+
+type DateMode = "month" | "range";
+
+function currentYearMonth() {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+}
 
 export function ExpensesTable() {
   const { categories } = useCategories();
@@ -31,12 +41,41 @@ export function ExpensesTable() {
   const [deletingId, setDeletingId] = useState<number | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<number | null>(null);
 
+  // Date filter
+  const [dateMode, setDateMode] = useState<DateMode>("month");
+  const [selectedMonth, setSelectedMonth] = useState(currentYearMonth()); // "YYYY-MM"
+  const [rangeFrom, setRangeFrom] = useState("");
+  const [rangeTo, setRangeTo] = useState("");
+
+  function monthToRange(ym: string): { from: string; to: string } {
+    const [year, month] = ym.split("-").map(Number);
+    const lastDay = new Date(year, month, 0).getDate();
+    return {
+      from: `${ym}-01`,
+      to: `${ym}-${String(lastDay).padStart(2, "0")}`,
+    };
+  }
+
+  function stepMonth(delta: number) {
+    const [year, month] = selectedMonth.split("-").map(Number);
+    const d = new Date(year, month - 1 + delta, 1);
+    setSelectedMonth(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`);
+  }
+
   const fetchExpenses = useCallback(async () => {
     setLoading(true);
     try {
       const params = new URLSearchParams();
       if (search) params.set("search", search);
       if (category !== "all") params.set("category", category);
+      if (dateMode === "month") {
+        const { from, to } = monthToRange(selectedMonth);
+        params.set("from", from);
+        params.set("to", to);
+      } else {
+        if (rangeFrom) params.set("from", rangeFrom);
+        if (rangeTo)   params.set("to", rangeTo);
+      }
       const res = await fetch(`/api/expenses?${params.toString()}`);
       const data = await res.json();
       setExpenses(data);
@@ -45,7 +84,7 @@ export function ExpensesTable() {
     } finally {
       setLoading(false);
     }
-  }, [search, category]);
+  }, [search, category, dateMode, selectedMonth, rangeFrom, rangeTo]);
 
   useEffect(() => { fetchExpenses(); }, [fetchExpenses]);
 
@@ -77,48 +116,152 @@ export function ExpensesTable() {
     <div className="space-y-4 animate-fade-up">
 
       {/* Filter bar */}
-      <div className="glass-card p-3 flex flex-col sm:flex-row gap-2.5">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-stone-600" />
-          <input
-            type="text"
-            placeholder="Suchen…"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className={cn(
-              "w-full bg-transparent border border-stone-800 rounded-md pl-8 pr-9 py-2",
-              "text-[13px] text-stone-300 placeholder:text-stone-700",
-              "focus:outline-none focus:border-amber-700/50 transition-colors"
+      <div className="glass-card p-3 flex flex-col gap-2.5">
+        {/* Row 1: search + category + import */}
+        <div className="flex flex-col sm:flex-row gap-2.5">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-stone-600" />
+            <input
+              type="text"
+              placeholder="Suchen…"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className={cn(
+                "w-full bg-transparent border border-stone-800 rounded-md pl-8 pr-9 py-2",
+                "text-[13px] text-stone-300 placeholder:text-stone-700",
+                "focus:outline-none focus:border-amber-700/50 transition-colors"
+              )}
+            />
+            {search && (
+              <button
+                onClick={() => setSearch("")}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-stone-600 hover:text-stone-400 transition-colors"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
             )}
-          />
-          {search && (
-            <button
-              onClick={() => setSearch("")}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-stone-600 hover:text-stone-400 transition-colors"
+          </div>
+
+          <div className="relative">
+            <select
+              value={category}
+              onChange={(e) => setCategory(e.target.value)}
+              className={cn(
+                "appearance-none bg-transparent border border-stone-800 rounded-md pl-3 pr-8 py-2",
+                "text-[13px] text-stone-400 [color-scheme:dark] w-full sm:min-w-40",
+                "focus:outline-none focus:border-amber-700/50 transition-colors cursor-pointer"
+              )}
             >
-              <X className="w-3.5 h-3.5" />
-            </button>
-          )}
+              <option value="all">Alle Kategorien</option>
+              {categories.map((cat) => (
+                <option key={cat.id} value={cat.id}>
+                  {cat.icon} {cat.label}
+                </option>
+              ))}
+            </select>
+            <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-stone-600 pointer-events-none" />
+          </div>
+
+          <ImportDialog onImported={fetchExpenses} />
         </div>
 
-        <div className="relative">
-          <select
-            value={category}
-            onChange={(e) => setCategory(e.target.value)}
-            className={cn(
-              "appearance-none bg-transparent border border-stone-800 rounded-md pl-3 pr-8 py-2",
-              "text-[13px] text-stone-400 [color-scheme:dark] w-full sm:min-w-40",
-              "focus:outline-none focus:border-amber-700/50 transition-colors cursor-pointer"
-            )}
-          >
-            <option value="all">Alle Kategorien</option>
-            {categories.map((cat) => (
-              <option key={cat.id} value={cat.id}>
-                {cat.icon} {cat.label}
-              </option>
-            ))}
-          </select>
-          <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-stone-600 pointer-events-none" />
+        {/* Row 2: date filter */}
+        <div className="flex items-center gap-2 flex-wrap">
+          {/* Mode toggle */}
+          <div className="flex rounded-md border border-stone-800 overflow-hidden text-[12px]">
+            <button
+              onClick={() => setDateMode("month")}
+              className={cn(
+                "px-3 py-1.5 transition-colors",
+                dateMode === "month"
+                  ? "bg-stone-800 text-stone-200"
+                  : "text-stone-600 hover:text-stone-400"
+              )}
+            >
+              Monat
+            </button>
+            <button
+              onClick={() => setDateMode("range")}
+              className={cn(
+                "px-3 py-1.5 transition-colors border-l border-stone-800",
+                dateMode === "range"
+                  ? "bg-stone-800 text-stone-200"
+                  : "text-stone-600 hover:text-stone-400"
+              )}
+            >
+              Zeitraum
+            </button>
+          </div>
+
+          {dateMode === "month" ? (
+            <div className="flex items-center gap-1">
+              <button
+                onClick={() => stepMonth(-1)}
+                className="w-7 h-7 flex items-center justify-center rounded border border-stone-800 text-stone-500 hover:text-stone-300 hover:border-stone-700 transition-colors"
+              >
+                <ChevronLeft className="w-3.5 h-3.5" />
+              </button>
+              <input
+                type="month"
+                value={selectedMonth}
+                onChange={(e) => setSelectedMonth(e.target.value)}
+                className={cn(
+                  "bg-transparent border border-stone-800 rounded-md px-3 py-1.5",
+                  "text-[13px] text-stone-300 [color-scheme:dark]",
+                  "focus:outline-none focus:border-amber-700/50 transition-colors"
+                )}
+              />
+              <button
+                onClick={() => stepMonth(1)}
+                className="w-7 h-7 flex items-center justify-center rounded border border-stone-800 text-stone-500 hover:text-stone-300 hover:border-stone-700 transition-colors"
+              >
+                <ChevronRight className="w-3.5 h-3.5" />
+              </button>
+              <button
+                onClick={() => setSelectedMonth(currentYearMonth())}
+                className={cn(
+                  "px-2.5 py-1.5 rounded border text-[12px] transition-colors",
+                  selectedMonth === currentYearMonth()
+                    ? "border-stone-800 text-stone-700 cursor-default"
+                    : "border-stone-800 text-stone-500 hover:text-stone-300 hover:border-stone-700"
+                )}
+              >
+                Heute
+              </button>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2 flex-wrap">
+              <input
+                type="date"
+                value={rangeFrom}
+                onChange={(e) => setRangeFrom(e.target.value)}
+                className={cn(
+                  "bg-transparent border border-stone-800 rounded-md px-3 py-1.5",
+                  "text-[13px] text-stone-300 [color-scheme:dark]",
+                  "focus:outline-none focus:border-amber-700/50 transition-colors"
+                )}
+              />
+              <span className="text-stone-600 text-[12px]">bis</span>
+              <input
+                type="date"
+                value={rangeTo}
+                onChange={(e) => setRangeTo(e.target.value)}
+                className={cn(
+                  "bg-transparent border border-stone-800 rounded-md px-3 py-1.5",
+                  "text-[13px] text-stone-300 [color-scheme:dark]",
+                  "focus:outline-none focus:border-amber-700/50 transition-colors"
+                )}
+              />
+              {(rangeFrom || rangeTo) && (
+                <button
+                  onClick={() => { setRangeFrom(""); setRangeTo(""); }}
+                  className="text-stone-600 hover:text-stone-400 transition-colors"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
+          )}
         </div>
       </div>
 

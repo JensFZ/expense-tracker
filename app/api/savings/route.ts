@@ -3,8 +3,16 @@ import { getSavingsEntries, insertSavingsEntry } from "@/lib/db";
 
 export async function GET(request: NextRequest) {
   try {
-    const categoryId = request.nextUrl.searchParams.get("category_id") ?? undefined;
-    return Response.json(getSavingsEntries(categoryId));
+    const { searchParams } = request.nextUrl;
+    const categoryId = searchParams.get("category_id") ?? undefined;
+    const from = searchParams.get("from");
+    const to   = searchParams.get("to");
+
+    let entries = getSavingsEntries(categoryId);
+    if (from) entries = entries.filter((e) => e.date >= from);
+    if (to)   entries = entries.filter((e) => e.date <= to);
+
+    return Response.json(entries);
   } catch (err) {
     console.error(err);
     return Response.json({ error: "Datenbankfehler" }, { status: 500 });

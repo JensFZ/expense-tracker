@@ -29,6 +29,7 @@ export interface Expense {
   note: string | null;
   type: "expense" | "income";
   account_id: number | null;
+  external_id: string | null;
   created_at: string;
 }
 
@@ -162,6 +163,10 @@ function getDb(): Database.Database {
   if (!recCols.includes("account_id")) {
     db.exec("ALTER TABLE recurring_entries ADD COLUMN account_id INTEGER REFERENCES accounts(id) ON DELETE SET NULL");
   }
+  if (!cols.includes("external_id")) {
+    db.exec("ALTER TABLE expenses ADD COLUMN external_id TEXT");
+    db.exec("CREATE UNIQUE INDEX IF NOT EXISTS idx_expenses_external_id ON expenses(external_id) WHERE external_id IS NOT NULL");
+  }
 
   // Seed default categories if empty
   const count = (db.prepare("SELECT COUNT(*) as n FROM categories").get() as { n: number }).n;
@@ -273,6 +278,26 @@ export function updateExpense(id: number, amount: number, category: string, date
     .prepare("UPDATE expenses SET amount = ?, category = ?, date = ?, note = ?, type = ?, account_id = ? WHERE id = ?")
     .run(amount, category, date, note, type, accountId, id);
   return getExpenseById(id);
+}
+
+export function insertExpenseWithExternalId(
+  amount: number,
+  category: string,
+  date: string,
+  note: string | null,
+  type: "expense" | "income",
+  accountId: number | null,
+  externalId: string | null
+): Expense | null {
+  const db = getDb();
+  if (externalId) {
+    const existing = db.prepare("SELECT id FROM expenses WHERE external_id = ?").get(externalId);
+    if (existing) return null;
+  }
+  const result = db
+    .prepare("INSERT INTO expenses (amount, category, date, note, type, account_id, external_id) VALUES (?, ?, ?, ?, ?, ?, ?)")
+    .run(amount, category, date, note, type, accountId, externalId);
+  return getExpenseById(result.lastInsertRowid as number)!;
 }
 
 export function deleteExpense(id: number): boolean {
