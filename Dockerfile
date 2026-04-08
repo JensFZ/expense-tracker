@@ -21,6 +21,7 @@ WORKDIR /app
 
 ENV NODE_ENV=production
 ENV PORT=3000
+ENV DATA_DIR=/app/data
 
 # Nicht-root-Benutzer für Sicherheit
 RUN addgroup --system --gid 1001 nodejs \

@@ -1,9 +1,9 @@
 import { SignJWT, jwtVerify } from "jose";
 import { cookies } from "next/headers";
 import { NextRequest } from "next/server";
-import fs from "fs";
-import path from "path";
-import crypto from "crypto";
+import fs from "node:fs";
+import path from "node:path";
+import crypto from "node:crypto";
 
 const COOKIE_NAME = "auth_token";
 const MAX_AGE = 60 * 60 * 24 * 30; // 30 days
@@ -18,7 +18,7 @@ function getJwtSecret(): Uint8Array {
   if (process.env.JWT_SECRET) {
     return new TextEncoder().encode(process.env.JWT_SECRET);
   }
-  const secretFile = path.join(process.cwd(), "data", "secret.key");
+  const secretFile = path.join(process.env.DATA_DIR ?? path.join(process.cwd(), "data"), "secret.key");
   if (fs.existsSync(secretFile)) {
     return new TextEncoder().encode(fs.readFileSync(secretFile, "utf8").trim());
   }
