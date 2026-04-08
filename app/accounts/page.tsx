@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 import { getAccountBalances } from "@/lib/db";
 import { AccountManager } from "@/components/accounts/account-manager";
 

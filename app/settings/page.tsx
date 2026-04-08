@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 import { getMonthSpendingByCategory } from "@/lib/db";
 import { CategoryManager } from "@/components/settings/category-manager";
 

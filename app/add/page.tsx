@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 import { AddExpenseForm } from "@/components/expenses/add-expense-form";
 
 export default function AddPage() {

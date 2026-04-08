@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 import { getAllRecurring, getAllCategories, generateDueEntries } from "@/lib/db";
 import { RecurringManager } from "@/components/recurring/recurring-manager";
 

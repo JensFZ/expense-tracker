@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 import { getAllUsers } from "@/lib/db";
 import { UserManager } from "@/components/users/user-manager";
 

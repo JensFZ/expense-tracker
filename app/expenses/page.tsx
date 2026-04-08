@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 import { ExpensesTable } from "@/components/expenses/expenses-table";
 
 export default function ExpensesPage() {
