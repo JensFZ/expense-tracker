@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useCategories } from "@/hooks/use-categories";
 import { useAccounts } from "@/hooks/use-accounts";
 import { cn } from "@/lib/utils";
-import { CheckCircle2, Loader2, TrendingDown, TrendingUp } from "lucide-react";
+import { Camera, CheckCircle2, Loader2, TrendingDown, TrendingUp, X } from "lucide-react";
 
 type EntryType = "expense" | "income";
 
@@ -35,6 +35,11 @@ export function AddExpenseForm({
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError]     = useState("");
+
+  type ScanStatus = "idle" | "scanning" | "done" | "error";
+  const [scanStatus, setScanStatus]         = useState<ScanStatus>("idle");
+  const [receiptPreview, setReceiptPreview] = useState<string | null>(null);
+  const fileInputRef                        = useRef<HTMLInputElement>(null);
 
   // Company autocomplete state
   const [companySuggestions, setCompanySuggestions] = useState<string[]>([]);
@@ -101,6 +106,32 @@ export function AddExpenseForm({
     }
   }
 
+  async function handleReceiptFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setReceiptPreview(URL.createObjectURL(file));
+    setScanStatus("scanning");
+    try {
+      const body = new FormData();
+      body.append("image", file);
+      const res  = await fetch("/api/receipt-scan", { method: "POST", body });
+      if (!res.ok) throw new Error();
+      const data = await res.json() as { amount: number | null; company: string | null };
+      if (data.amount !== null) setForm((f) => ({ ...f, amount: String(data.amount) }));
+      if (data.company)         setForm((f) => ({ ...f, company: data.company! }));
+      setScanStatus("done");
+    } catch {
+      setScanStatus("error");
+    } finally {
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  }
+
+  function clearReceipt() {
+    setReceiptPreview(null);
+    setScanStatus("idle");
+  }
+
   return (
     <form onSubmit={handleSubmit} className="glass-card p-5 sm:p-6 space-y-6 animate-fade-up">
 
@@ -147,6 +178,56 @@ export function AddExpenseForm({
             )}
           />
           <span className="absolute right-0 bottom-3 font-display text-2xl text-stone-600">€</span>
+        </div>
+
+        {/* Versteckter File-Input */}
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          capture="environment"
+          className="sr-only"
+          onChange={handleReceiptFile}
+        />
+
+        {/* Kamera-Button / Scan-Status */}
+        <div className="mt-3 flex items-center gap-3">
+          {receiptPreview ? (
+            <>
+              <div className="relative flex-shrink-0">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={receiptPreview} alt="Kassenbon"
+                  className="w-12 h-12 object-cover rounded-md border border-stone-800" />
+                {scanStatus !== "scanning" && (
+                  <button type="button" onClick={clearReceipt}
+                    className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-stone-700 flex items-center justify-center">
+                    <X className="w-2.5 h-2.5 text-stone-300" />
+                  </button>
+                )}
+              </div>
+              {scanStatus === "scanning" && (
+                <span className="flex items-center gap-1.5 text-[12px] text-stone-500">
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" /> Bon wird gescannt…
+                </span>
+              )}
+              {scanStatus === "done" && (
+                <span className="flex items-center gap-1.5 text-[12px] text-emerald-500">
+                  <CheckCircle2 className="w-3.5 h-3.5" /> Betrag erkannt
+                </span>
+              )}
+              {scanStatus === "error" && (
+                <span className="text-[12px] text-red-400">
+                  Erkennung fehlgeschlagen – bitte manuell eingeben
+                </span>
+              )}
+            </>
+          ) : (
+            <button type="button" onClick={() => fileInputRef.current?.click()}
+              disabled={scanStatus === "scanning"}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-[12px] border-stone-800 text-stone-500 hover:border-stone-700 hover:text-stone-400 transition-colors tap-target">
+              <Camera className="w-3.5 h-3.5" /> Kassenbon scannen
+            </button>
+          )}
         </div>
       </div>
 
