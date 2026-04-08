@@ -58,7 +58,7 @@ export function UserManager({ initialUsers }: Props) {
     setDialogMode("edit");
   }
 
-  async function handleSave(e: React.FormEvent) {
+  async function handleSave(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if (dialogMode === "add" || form.password) {
       if (form.password !== form.passwordConfirm) {

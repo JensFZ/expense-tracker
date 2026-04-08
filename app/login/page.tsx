@@ -1,21 +1,30 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Eye, EyeOff, LogIn } from "lucide-react";
+import { SetupDialog } from "@/components/users/setup-dialog";
 
 export default function LoginPage() {
   const router = useRouter();
+  const [status, setStatus] = useState<"loading" | "setup" | "login">("loading");
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [showPw, setShowPw] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  async function handleSubmit(e: React.FormEvent) {
+  useEffect(() => {
+    fetch("/api/users/setup-status")
+      .then((r) => r.json())
+      .then((d) => setStatus(d.hasUsers ? "login" : "setup"))
+      .catch(() => setStatus("login"));
+  }, []);
+
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError(null);
     setLoading(true);
@@ -35,6 +44,30 @@ export default function LoginPage() {
     } finally {
       setLoading(false);
     }
+  }
+
+  if (status === "loading") {
+    return (
+      <div className="fixed inset-0 z-[200] flex items-center justify-center bg-[#0a0905]">
+        <div className="w-6 h-6 rounded-full border-2 border-amber-500/30 border-t-amber-500 animate-spin" />
+      </div>
+    );
+  }
+
+  if (status === "setup") {
+    return (
+      <div className="fixed inset-0 z-[200] flex items-center justify-center bg-[#0a0905]">
+        <div
+          className="absolute inset-0 opacity-[0.03]"
+          style={{
+            backgroundImage:
+              "linear-gradient(rgba(251,191,36,1) 1px, transparent 1px), linear-gradient(90deg, rgba(251,191,36,1) 1px, transparent 1px)",
+            backgroundSize: "60px 60px",
+          }}
+        />
+        <SetupDialog onComplete={() => setStatus("login")} />
+      </div>
+    );
   }
 
   return (
