@@ -77,7 +77,7 @@ function AccountModal({ initial, onClose, onSaved }: {
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4 overflow-hidden">
       <div className="absolute inset-0 bg-black/80 backdrop-blur-md" onClick={onClose} />
-      <div className="relative w-full sm:max-w-md animate-scale-in glass-card p-6 space-y-5 rounded-t-2xl sm:rounded-xl max-h-[85vh] overflow-y-auto overscroll-contain">
+      <div className="relative w-full sm:max-w-md animate-scale-in glass-card p-6 space-y-5 rounded-t-2xl sm:rounded-xl max-h-[85vh] !overflow-y-auto overscroll-contain">
         <div className="sm:hidden w-10 h-1 bg-stone-700 rounded-full mx-auto -mt-2 mb-1" />
 
         <div className="flex items-center justify-between">
