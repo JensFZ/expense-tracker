@@ -7,7 +7,7 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   try {
-    const { type, amount, category, note, frequency, start_date, account_id } = await req.json();
+    const { type, amount, category, note, company, frequency, start_date, account_id } = await req.json();
     if (!amount || amount <= 0)   return NextResponse.json({ error: "Ungültiger Betrag" }, { status: 400 });
     if (!frequency)               return NextResponse.json({ error: "Häufigkeit fehlt" }, { status: 400 });
     if (!start_date)              return NextResponse.json({ error: "Startdatum fehlt" }, { status: 400 });
@@ -20,7 +20,7 @@ export async function POST(req: NextRequest) {
       note ?? null,
       frequency,
       start_date,
-      account_id ? Number(account_id) : null
+      { accountId: account_id ? Number(account_id) : null, company: company ?? null }
     );
     // Generate immediately if start_date is today or past
     generateDueEntries();

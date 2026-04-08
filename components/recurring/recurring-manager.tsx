@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { RecurringEntry } from "@/lib/db";
 import { Category, resolveCategory } from "@/lib/categories";
 import { useAccounts } from "@/hooks/use-accounts";
@@ -60,14 +60,40 @@ function RecurringModal({
   const [amount,    setAmount]    = useState(initial?.amount.toString() ?? "");
   const [category,  setCategory]  = useState(initial?.category ?? "");
   const [note,      setNote]      = useState(initial?.note ?? "");
+  const [company,   setCompany]   = useState(initial?.company ?? "");
   const [frequency, setFrequency] = useState<Frequency>(initial?.frequency ?? "monthly");
   const [startDate, setStartDate] = useState(initial?.start_date ?? today);
   const [accountId, setAccountId] = useState<number | null>(initial?.account_id ?? null);
   const [loading,   setLoading]   = useState(false);
   const [error,     setError]     = useState("");
 
+  const [companySuggestions, setCompanySuggestions] = useState<string[]>([]);
+  const [showSuggestions, setShowSuggestions]       = useState(false);
+  const companyRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    fetch("/api/companies")
+      .then((r) => r.json())
+      .then((data: string[]) => setCompanySuggestions(data))
+      .catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (companyRef.current && !companyRef.current.contains(e.target as Node)) {
+        setShowSuggestions(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
   const { accounts } = useAccounts();
   const isIncome = type === "income";
+
+  const filteredCompanies = company.trim()
+    ? companySuggestions.filter((c) => c.toLowerCase().includes(company.toLowerCase()))
+    : companySuggestions;
 
   async function handleSave() {
     setError("");
@@ -87,6 +113,7 @@ function RecurringModal({
           amount: Number(amount),
           category: isIncome ? "" : category,
           note: note || null,
+          company: company || null,
           frequency,
           start_date: startDate,
           account_id: accountId,
@@ -188,6 +215,43 @@ function RecurringModal({
             placeholder={isIncome ? "z.B. Gehalt, Miete…" : "z.B. Netflix, Miete…"}
             value={note} onChange={(e) => setNote(e.target.value)}
             maxLength={200} className="field-input text-[13px]" />
+        </div>
+
+        {/* Company autocomplete */}
+        <div ref={companyRef} className="relative">
+          <label className="block text-[11px] uppercase tracking-[0.1em] text-stone-500 mb-2">
+            Firma
+            <span className="normal-case text-stone-700 tracking-normal ml-1">(optional)</span>
+          </label>
+          <input
+            type="text"
+            placeholder="z.B. Rewe, Amazon, …"
+            value={company}
+            onChange={(e) => setCompany(e.target.value)}
+            onFocus={() => setShowSuggestions(true)}
+            autoComplete="off"
+            maxLength={200}
+            className="field-input text-[13px] w-full"
+          />
+          {showSuggestions && filteredCompanies.length > 0 && (
+            <ul className="absolute z-20 left-0 right-0 mt-1 rounded-lg border border-stone-800 bg-stone-950 shadow-xl overflow-hidden">
+              {filteredCompanies.map((c) => (
+                <li key={c}>
+                  <button
+                    type="button"
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      setCompany(c);
+                      setShowSuggestions(false);
+                    }}
+                    className="w-full text-left px-3 py-2 text-[13px] text-stone-300 hover:bg-stone-800 transition-colors"
+                  >
+                    {c}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
 
         {/* Account selector */}
@@ -430,13 +494,16 @@ export function RecurringManager({
               </span>
             </div>
 
-            {/* Account + next due */}
+            {/* Account + company + next due */}
             <div className="flex items-center gap-3 mt-1.5 flex-wrap">
               {account && (
                 <span className="inline-flex items-center gap-1 text-[11px]" style={{ color: `${account.color}99` }}>
                   <span>{account.icon}</span>
                   <span>{account.name}</span>
                 </span>
+              )}
+              {entry.company && (
+                <span className="text-[11px] text-stone-600">{entry.company}</span>
               )}
               <p className="text-[11px] text-stone-700">
                 Nächste Fälligkeit:{" "}

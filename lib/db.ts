@@ -40,6 +40,7 @@ export interface RecurringEntry {
   amount: number;
   category: string;
   note: string | null;
+  company: string | null;
   frequency: "weekly" | "monthly" | "quarterly" | "semi_annual" | "annual";
   start_date: string;
   next_due: string;
@@ -163,6 +164,9 @@ function getDb(): Database.Database {
   const recCols = (db.prepare("PRAGMA table_info(recurring_entries)").all() as { name: string }[]).map((c) => c.name);
   if (!recCols.includes("account_id")) {
     db.exec("ALTER TABLE recurring_entries ADD COLUMN account_id INTEGER REFERENCES accounts(id) ON DELETE SET NULL");
+  }
+  if (!recCols.includes("company")) {
+    db.exec("ALTER TABLE recurring_entries ADD COLUMN company TEXT");
   }
   if (!cols.includes("external_id")) {
     db.exec("ALTER TABLE expenses ADD COLUMN external_id TEXT");
@@ -388,8 +392,8 @@ export function generateDueEntries(): number {
     let current = entry.next_due;
     while (current <= today) {
       db.prepare(
-        "INSERT INTO expenses (amount, category, date, note, type, account_id) VALUES (?, ?, ?, ?, ?, ?)"
-      ).run(entry.amount, entry.category, current, entry.note, entry.type, entry.account_id ?? null);
+        "INSERT INTO expenses (amount, category, date, note, type, account_id, company) VALUES (?, ?, ?, ?, ?, ?, ?)"
+      ).run(entry.amount, entry.category, current, entry.note, entry.type, entry.account_id ?? null, entry.company ?? null);
       generated++;
       current = advanceDate(current, entry.frequency);
     }
@@ -410,25 +414,29 @@ export function getRecurringById(id: number): RecurringEntry | undefined {
 
 export function insertRecurring(
   type: string, amount: number, category: string, note: string | null,
-  frequency: string, startDate: string, accountId: number | null = null
+  frequency: string, startDate: string,
+  opts: { accountId?: number | null; company?: string | null } = {}
 ): RecurringEntry {
+  const { accountId = null, company = null } = opts;
   const result = getDb()
     .prepare(
-      "INSERT INTO recurring_entries (type, amount, category, note, frequency, start_date, next_due, account_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
+      "INSERT INTO recurring_entries (type, amount, category, note, frequency, start_date, next_due, account_id, company) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
     )
-    .run(type, amount, category, note, frequency, startDate, startDate, accountId);
+    .run(type, amount, category, note, frequency, startDate, startDate, accountId, company);
   return getRecurringById(result.lastInsertRowid as number)!;
 }
 
 export function updateRecurring(
   id: number, amount: number, category: string, note: string | null,
-  frequency: string, isActive: number, accountId: number | null = null
+  frequency: string, isActive: number,
+  opts: { accountId?: number | null; company?: string | null } = {}
 ): RecurringEntry | undefined {
+  const { accountId = null, company = null } = opts;
   getDb()
     .prepare(
-      "UPDATE recurring_entries SET amount = ?, category = ?, note = ?, frequency = ?, is_active = ?, account_id = ? WHERE id = ?"
+      "UPDATE recurring_entries SET amount = ?, category = ?, note = ?, frequency = ?, is_active = ?, account_id = ?, company = ? WHERE id = ?"
     )
-    .run(amount, category, note, frequency, isActive, accountId, id);
+    .run(amount, category, note, frequency, isActive, accountId, company, id);
   return getRecurringById(id);
 }
 

@@ -8,15 +8,15 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
 
   try {
     const body = await req.json();
-    const updated = updateRecurring(
-      Number(id),
-      body.amount    !== undefined ? Number(body.amount)          : entry.amount,
-      body.category  !== undefined ? body.category                : entry.category,
-      body.note      !== undefined ? body.note                    : entry.note,
-      body.frequency !== undefined ? body.frequency               : entry.frequency,
-      body.is_active !== undefined ? (body.is_active ? 1 : 0)    : entry.is_active,
-      body.account_id !== undefined ? (body.account_id ? Number(body.account_id) : null) : entry.account_id
-    );
+    const amount    = body.amount    === undefined ? entry.amount    : Number(body.amount);
+    const category  = body.category  ?? entry.category;
+    const note      = body.note      ?? entry.note;
+    const frequency = body.frequency ?? entry.frequency;
+    const isActive  = body.is_active === undefined ? entry.is_active : Number(!!body.is_active);
+    const rawAccountId = body.account_id ? Number(body.account_id) : null;
+    const accountId = body.account_id === undefined ? entry.account_id : rawAccountId;
+    const company   = body.company === undefined ? entry.company : (body.company || null);
+    const updated = updateRecurring(Number(id), amount, category, note, frequency, isActive, { accountId, company });
     return NextResponse.json(updated);
   } catch (e) {
     return NextResponse.json({ error: String(e) }, { status: 500 });
