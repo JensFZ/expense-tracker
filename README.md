@@ -15,6 +15,7 @@ Eine selbst gehostete Webanwendung zur persönlichen Finanzverwaltung. Ausgaben 
 - **Daueraufträge** – wiederkehrende Buchungen (wöchentlich bis jährlich)
 - **Konten** – mehrere Bankkonten mit Echtzeitsaldo
 - **Kategorien** – eigene Kategorien mit Icon, Farbe und Monatslimit
+- **Bonscanner** – Kassenbon per Kamera oder Datei einlesen; Betrag und Firma werden automatisch per OCR erkannt und ins Formular übernommen
 - **CSV-Import** – Sparkasse-Kontoauszüge automatisch einlesen (Duplikatserkennung)
 - **Suche** – nach Notiz, Kategorie, Firma und Betrag (Punkt oder Komma als Trennzeichen)
 - **Benutzerverwaltung** – Login mit Passwortschutz
@@ -72,6 +73,7 @@ Bankkontoauszüge im Sparkasse-CSV-Format importieren. Bereits vorhandene Buchun
 - [Tailwind CSS](https://tailwindcss.com)
 - [date-fns](https://date-fns.org)
 - [Lucide Icons](https://lucide.dev)
+- [Tesseract.js](https://tesseract.projectnaptha.com) – OCR für den Bonscanner
 
 ---
 
@@ -223,8 +225,11 @@ cp data/expenses.db data/expenses_$(date +%Y%m%d).db
 
 ### Umgebungsvariablen
 
-| Variable   | Standard | Beschreibung                  |
-|------------|----------|-------------------------------|
-| `PORT`     | `3000`   | Port, auf dem die App lauscht |
-| `DATA_DIR` | `./data` | Pfad zum Datenbankverzeichnis |
-| `NODE_ENV` | –        | Auf `production` setzen       |
+| Variable     | Standard        | Beschreibung                                                     |
+|--------------|-----------------|------------------------------------------------------------------|
+| `PORT`       | `3000`          | Port, auf dem die App lauscht                                    |
+| `DATA_DIR`   | `./data`        | Pfad zum Datenbankverzeichnis                                    |
+| `NODE_ENV`   | –               | Auf `production` setzen                                          |
+| `JWT_SECRET` | *(autogeneriert)* | Geheimer Schlüssel für Session-Tokens (HS256 JWT)             |
+
+> **JWT-Secret:** Wenn `JWT_SECRET` nicht gesetzt ist, generiert die App beim ersten Start automatisch einen zufälligen Schlüssel und speichert ihn unter `data/secret.key`. Bei Neustart wird dieser Schlüssel wiederverwendet, sodass bestehende Sessions gültig bleiben. Für den Produktivbetrieb empfiehlt sich ein expliziter Wert via Umgebungsvariable, damit Sessions auch nach einem Re-Deploy oder Container-Neustart erhalten bleiben.
