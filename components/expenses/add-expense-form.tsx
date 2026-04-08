@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useCategories } from "@/hooks/use-categories";
 import { useAccounts } from "@/hooks/use-accounts";
 import { cn } from "@/lib/utils";
-import { Camera, CheckCircle2, Loader2, TrendingDown, TrendingUp, X } from "lucide-react";
+import { Camera, CheckCircle2, ChevronDown, Loader2, TrendingDown, TrendingUp, X } from "lucide-react";
 
 type EntryType = "expense" | "income";
 
@@ -242,26 +242,25 @@ export function AddExpenseForm({
               <Loader2 className="w-3.5 h-3.5 animate-spin" /> Lade…
             </div>
           ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-              {categories.map((cat) => {
-                const selected = form.category === cat.id;
-                return (
-                  <button
-                    key={cat.id} type="button"
-                    onClick={() => setForm({ ...form, category: cat.id })}
-                    className={cn(
-                      "flex flex-col items-center gap-1.5 px-3 py-3 rounded-lg border text-xs font-medium",
-                      "transition-all duration-200 relative overflow-hidden tap-target",
-                      selected ? "border-current" : "border-stone-800 text-stone-500 hover:border-stone-700 hover:text-stone-400"
-                    )}
-                    style={selected ? { color: cat.color, borderColor: `${cat.color}60`, backgroundColor: `${cat.color}0d` } : {}}
-                  >
-                    <span className="text-xl leading-none">{cat.icon}</span>
-                    <span className="tracking-wide">{cat.label}</span>
-                    {selected && <span className="absolute bottom-0 left-0 right-0 h-0.5" style={{ backgroundColor: cat.color, opacity: 0.6 }} />}
-                  </button>
-                );
-              })}
+            <div className="relative">
+              <select
+                value={form.category}
+                onChange={(e) => setForm({ ...form, category: e.target.value })}
+                className={cn(
+                  "w-full appearance-none bg-transparent border border-stone-800 rounded-md pl-3 pr-8 py-2.5",
+                  "text-[13px] [color-scheme:dark]",
+                  "focus:outline-none focus:border-amber-700/50 transition-colors cursor-pointer",
+                  form.category ? "text-stone-300" : "text-stone-600"
+                )}
+              >
+                <option value="">Kategorie wählen…</option>
+                {categories.map((cat) => (
+                  <option key={cat.id} value={cat.id}>
+                    {cat.icon} {cat.label}
+                  </option>
+                ))}
+              </select>
+              <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-stone-600 pointer-events-none" />
             </div>
           )}
         </div>
@@ -286,40 +285,33 @@ export function AddExpenseForm({
       {/* Account selector — only shown when accounts exist */}
       {accounts.length > 0 && (
         <>
-          <div className="divider" />
           <div>
             <label className="block text-[11px] uppercase tracking-[0.1em] text-stone-500 mb-3">
               Konto
             </label>
-            <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1 scrollbar-none">
-              {accounts.map((acc) => {
-                const selected = accountId === acc.id;
-                const balance  = acc.tracked_balance;
-                return (
-                  <button
-                    key={acc.id}
-                    type="button"
-                    onClick={() => setAccountId(acc.id)}
-                    className={cn(
-                      "flex-shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-lg border text-[12px] transition-all duration-200 tap-target"
-                    )}
-                    style={
-                      selected
-                        ? { borderColor: `${acc.color}60`, backgroundColor: `${acc.color}10`, color: acc.color }
-                        : { borderColor: "#292524", color: "#78716c" }
-                    }
-                  >
-                    <span>{acc.icon}</span>
-                    <span className="whitespace-nowrap">{acc.name}</span>
-                    <span className={cn(
-                      "font-numbers text-[10px] opacity-70",
-                      balance >= 0 ? "text-emerald-400" : "text-red-400"
-                    )}>
-                      {balance < 0 ? "−" : ""}{Math.abs(balance).toLocaleString("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €
-                    </span>
-                  </button>
-                );
-              })}
+            <div className="relative">
+              <select
+                value={accountId ?? ""}
+                onChange={(e) => setAccountId(e.target.value ? Number(e.target.value) : null)}
+                className={cn(
+                  "w-full appearance-none bg-transparent border border-stone-800 rounded-md pl-3 pr-8 py-2.5",
+                  "text-[13px] [color-scheme:dark]",
+                  "focus:outline-none focus:border-amber-700/50 transition-colors cursor-pointer",
+                  accountId !== null ? "text-stone-300" : "text-stone-600"
+                )}
+              >
+                <option value="">Konto wählen…</option>
+                {accounts.map((acc) => {
+                  const balance = acc.tracked_balance;
+                  const balanceStr = `${balance < 0 ? "−" : ""}${Math.abs(balance).toLocaleString("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €`;
+                  return (
+                    <option key={acc.id} value={acc.id}>
+                      {acc.icon} {acc.name} ({balanceStr})
+                    </option>
+                  );
+                })}
+              </select>
+              <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-stone-600 pointer-events-none" />
             </div>
           </div>
         </>
