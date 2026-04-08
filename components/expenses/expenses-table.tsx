@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { createPortal } from "react-dom";
 import { Expense } from "@/lib/db";
 import { resolveCategory } from "@/lib/categories";
 import { useCategories } from "@/hooks/use-categories";
@@ -469,7 +470,7 @@ export function ExpensesTable() {
       )}
 
       {/* Edit Modal — centered on desktop, bottom sheet on mobile */}
-      {editingExpense && (
+      {editingExpense && createPortal(
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4">
           <div
             className="absolute inset-0 bg-black/80 backdrop-blur-md"
@@ -507,11 +508,12 @@ export function ExpensesTable() {
               />
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* Delete Confirm — centered on desktop, bottom sheet on mobile */}
-      {deleteConfirm !== null && (
+      {deleteConfirm !== null && createPortal(
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4">
           <div
             className="absolute inset-0 bg-black/80 backdrop-blur-md"
@@ -554,7 +556,8 @@ export function ExpensesTable() {
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );
