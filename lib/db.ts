@@ -370,6 +370,7 @@ function advanceDate(dateStr: string, frequency: string): string {
   const [y, m, d] = dateStr.split("-").map(Number);
   const dt = new Date(y, m - 1, d, 12, 0, 0);
   switch (frequency) {
+    case "daily":       dt.setDate(dt.getDate() + 1);       break;
     case "weekly":      dt.setDate(dt.getDate() + 7);       break;
     case "monthly":     dt.setMonth(dt.getMonth() + 1);     break;
     case "quarterly":   dt.setMonth(dt.getMonth() + 3);     break;
@@ -382,7 +383,8 @@ function advanceDate(dateStr: string, frequency: string): string {
 /** Run on every dashboard/recurring page load. Inserts due entries, advances next_due. */
 export function generateDueEntries(): number {
   const db = getDb();
-  const today = new Date().toISOString().split("T")[0];
+  const _now = new Date();
+  const today = `${_now.getFullYear()}-${String(_now.getMonth() + 1).padStart(2, "0")}-${String(_now.getDate()).padStart(2, "0")}`;
   const due = db.prepare(
     "SELECT * FROM recurring_entries WHERE is_active = 1 AND next_due <= ?"
   ).all(today) as RecurringEntry[];

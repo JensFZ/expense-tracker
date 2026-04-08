@@ -71,7 +71,7 @@ export function MonthlyBarChart({ data, categories }: MonthlyBarChartProps) {
           <p className="text-stone-600 text-sm">Keine Daten</p>
         </div>
       ) : (
-        <ResponsiveContainer width="100%" height={220}>
+        <ResponsiveContainer width="100%" height={220} minWidth={0}>
           <BarChart data={chartData} barCategoryGap="30%" barGap={0}>
             <CartesianGrid strokeDasharray="1 4" stroke="rgba(245,240,232,0.05)" vertical={false} />
             <XAxis dataKey="month" tick={{ fill: "#57534e", fontSize: 11, letterSpacing: "0.04em" }}

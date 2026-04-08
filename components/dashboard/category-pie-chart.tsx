@@ -2,7 +2,7 @@
 
 import { Expense } from "@/lib/db";
 import { Category } from "@/lib/categories";
-import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from "recharts";
+import { PieChart, Pie, Cell, Tooltip } from "recharts";
 
 interface CategoryPieChartProps {
   expenses: Expense[];
@@ -70,17 +70,15 @@ export function CategoryPieChart({ expenses, categories }: CategoryPieChartProps
         <div className="flex gap-4 items-center">
           {/* Donut + center label */}
           <div className="flex-shrink-0 relative" style={{ width: 160, height: 160 }}>
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie data={data} cx="50%" cy="50%" innerRadius={48} outerRadius={76}
-                  paddingAngle={2} dataKey="value" labelLine={false} label={CustomLabel} strokeWidth={0}>
-                  {data.map((entry, i) => (
-                    <Cell key={i} fill={entry.color} opacity={0.88} />
-                  ))}
-                </Pie>
-                <Tooltip content={<CustomTooltip />} />
-              </PieChart>
-            </ResponsiveContainer>
+            <PieChart width={160} height={160}>
+              <Pie data={data} cx="50%" cy="50%" innerRadius={48} outerRadius={76}
+                paddingAngle={2} dataKey="value" labelLine={false} label={CustomLabel} strokeWidth={0}>
+                {data.map((entry, i) => (
+                  <Cell key={i} fill={entry.color} opacity={0.88} />
+                ))}
+              </Pie>
+              <Tooltip content={<CustomTooltip />} />
+            </PieChart>
             {/* Center total */}
             <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
               <span className="font-numbers text-[13px] text-stone-300 leading-tight">

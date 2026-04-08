@@ -12,9 +12,10 @@ import {
   TrendingDown, TrendingUp, Repeat, ToggleLeft, ToggleRight,
 } from "lucide-react";
 
-type Frequency = "weekly" | "monthly" | "quarterly" | "semi_annual" | "annual";
+type Frequency = "daily" | "weekly" | "monthly" | "quarterly" | "semi_annual" | "annual";
 
 const FREQUENCIES: { value: Frequency; label: string; short: string }[] = [
+  { value: "daily",       label: "Täglich",        short: "Täglich"   },
   { value: "weekly",      label: "Wöchentlich",    short: "Wöchentl." },
   { value: "monthly",     label: "Monatlich",      short: "Monatl."   },
   { value: "quarterly",   label: "Vierteljährlich", short: "Quartals." },
@@ -26,6 +27,7 @@ function advanceDateClient(dateStr: string, frequency: Frequency): string {
   const [y, m, d] = dateStr.split("-").map(Number);
   const dt = new Date(y, m - 1, d, 12, 0, 0);
   switch (frequency) {
+    case "daily":       dt.setDate(dt.getDate() + 1);        break;
     case "weekly":      dt.setDate(dt.getDate() + 7);        break;
     case "monthly":     dt.setMonth(dt.getMonth() + 1);      break;
     case "quarterly":   dt.setMonth(dt.getMonth() + 3);      break;
@@ -53,7 +55,8 @@ function RecurringModal({
   onSaved: () => void;
 }) {
   const isEdit = !!initial;
-  const today  = new Date().toISOString().split("T")[0];
+  const _now = new Date();
+  const today = `${_now.getFullYear()}-${String(_now.getMonth() + 1).padStart(2, "0")}-${String(_now.getDate()).padStart(2, "0")}`;
   type EntryType = "expense" | "income";
 
   const [type,      setType]      = useState<EntryType>(initial?.type ?? "expense");

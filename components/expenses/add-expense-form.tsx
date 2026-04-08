@@ -247,7 +247,7 @@ export function AddExpenseForm({
                 value={form.category}
                 onChange={(e) => setForm({ ...form, category: e.target.value })}
                 className={cn(
-                  "w-full appearance-none bg-transparent border border-stone-800 rounded-md pl-3 pr-8 py-2.5",
+                  "w-full appearance-none bg-stone-950 border border-stone-800 rounded-md pl-3 pr-8 py-2.5",
                   "text-[13px] [color-scheme:dark]",
                   "focus:outline-none focus:border-amber-700/50 transition-colors cursor-pointer",
                   form.category ? "text-stone-300" : "text-stone-600"
@@ -294,7 +294,7 @@ export function AddExpenseForm({
                 value={accountId ?? ""}
                 onChange={(e) => setAccountId(e.target.value ? Number(e.target.value) : null)}
                 className={cn(
-                  "w-full appearance-none bg-transparent border border-stone-800 rounded-md pl-3 pr-8 py-2.5",
+                  "w-full appearance-none bg-stone-950 border border-stone-800 rounded-md pl-3 pr-8 py-2.5",
                   "text-[13px] [color-scheme:dark]",
                   "focus:outline-none focus:border-amber-700/50 transition-colors cursor-pointer",
                   accountId !== null ? "text-stone-300" : "text-stone-600"

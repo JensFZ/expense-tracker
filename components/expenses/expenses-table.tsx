@@ -2,9 +2,10 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { createPortal } from "react-dom";
-import { Expense } from "@/lib/db";
-import { resolveCategory } from "@/lib/categories";
+import { Expense, AccountWithBalance } from "@/lib/db";
+import { resolveCategory, Category } from "@/lib/categories";
 import { useCategories } from "@/hooks/use-categories";
+import { useAccounts } from "@/hooks/use-accounts";
 import { cn } from "@/lib/utils";
 import { format, parseISO } from "date-fns";
 import { de } from "date-fns/locale";
@@ -19,32 +20,218 @@ import {
   Loader2,
   AlertTriangle,
   TrendingUp,
+  Check,
 } from "lucide-react";
-import { AddExpenseForm } from "./add-expense-form";
 import { ImportDialog } from "./import-dialog";
 
 type DateMode = "month" | "range";
+type EntryType = "expense" | "income";
+
+type EditForm = {
+  amount: string;
+  category: string;
+  date: string;
+  note: string;
+  company: string;
+  accountId: number | null;
+  type: EntryType;
+};
 
 function currentYearMonth() {
   const now = new Date();
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
 }
 
+const selectCls = cn(
+  "w-full appearance-none bg-stone-950 border border-stone-800 rounded-md pl-2.5 pr-7 py-1.5",
+  "text-[12px] text-stone-300 [color-scheme:dark]",
+  "focus:outline-none focus:border-amber-700/50 transition-colors cursor-pointer"
+);
+const inputCls = cn(
+  "w-full bg-transparent border border-stone-800 rounded-md px-2.5 py-1.5",
+  "text-[12px] text-stone-300 placeholder:text-stone-700",
+  "focus:outline-none focus:border-amber-700/50 transition-colors"
+);
+
+function InlineEditForm({
+  expenseId,
+  editForm,
+  editError,
+  editLoading,
+  categories,
+  accounts,
+  setEditForm,
+  onSave,
+  onCancel,
+}: {
+  expenseId: number;
+  editForm: EditForm;
+  editError: string;
+  editLoading: boolean;
+  categories: Category[];
+  accounts: AccountWithBalance[];
+  setEditForm: React.Dispatch<React.SetStateAction<EditForm | null>>;
+  onSave: (id: number) => void;
+  onCancel: () => void;
+}) {
+  const isIncome = editForm.type === "income";
+  return (
+    <div className="space-y-2.5">
+      {/* Row 1: type toggle + amount + date */}
+      <div className="flex flex-wrap gap-2 items-end">
+        {/* Type toggle */}
+        <div>
+          <p className="text-[10px] uppercase tracking-[0.1em] text-stone-600 mb-1">Typ</p>
+          <div className="flex rounded-md overflow-hidden border border-stone-800 text-[11px]">
+            {(["expense", "income"] as EntryType[]).map((t) => (
+              <button
+                key={t} type="button"
+                onClick={() => setEditForm((f) => f ? { ...f, type: t, category: "" } : f)}
+                className={cn(
+                  "px-2.5 py-1.5 transition-colors",
+                  editForm.type === t
+                    ? t === "expense" ? "bg-red-950/60 text-red-300" : "bg-emerald-950/60 text-emerald-300"
+                    : "text-stone-600 hover:text-stone-400"
+                )}
+              >
+                {t === "expense" ? "Ausgabe" : "Einnahme"}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Amount */}
+        <div className="w-28">
+          <p className="text-[10px] uppercase tracking-[0.1em] text-stone-600 mb-1">Betrag</p>
+          <div className="relative">
+            <input
+              type="number" step="0.01" min="0.01" placeholder="0.00"
+              value={editForm.amount}
+              onChange={(e) => setEditForm((f) => f ? { ...f, amount: e.target.value } : f)}
+              className={cn(inputCls, "pr-6")}
+            />
+            <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[11px] text-stone-600">€</span>
+          </div>
+        </div>
+
+        {/* Date */}
+        <div>
+          <p className="text-[10px] uppercase tracking-[0.1em] text-stone-600 mb-1">Datum</p>
+          <input
+            type="date" value={editForm.date}
+            onChange={(e) => setEditForm((f) => f ? { ...f, date: e.target.value } : f)}
+            className={cn(inputCls, "[color-scheme:dark]")}
+          />
+        </div>
+
+        {/* Category (expense only) */}
+        {!isIncome && (
+          <div className="relative min-w-36">
+            <p className="text-[10px] uppercase tracking-[0.1em] text-stone-600 mb-1">Kategorie</p>
+            <select
+              value={editForm.category}
+              onChange={(e) => setEditForm((f) => f ? { ...f, category: e.target.value } : f)}
+              className={selectCls}
+            >
+              <option value="">Kategorie wählen…</option>
+              {categories.map((cat) => (
+                <option key={cat.id} value={cat.id}>{cat.icon} {cat.label}</option>
+              ))}
+            </select>
+            <ChevronDown className="absolute right-2 top-[calc(1.6rem)] w-3 h-3 text-stone-600 pointer-events-none" />
+          </div>
+        )}
+
+        {/* Note */}
+        <div className="flex-1 min-w-28">
+          <p className="text-[10px] uppercase tracking-[0.1em] text-stone-600 mb-1">Notiz</p>
+          <input
+            type="text" placeholder="Notiz…" maxLength={200}
+            value={editForm.note}
+            onChange={(e) => setEditForm((f) => f ? { ...f, note: e.target.value } : f)}
+            className={inputCls}
+          />
+        </div>
+
+        {/* Company */}
+        <div className="flex-1 min-w-28">
+          <p className="text-[10px] uppercase tracking-[0.1em] text-stone-600 mb-1">Firma</p>
+          <input
+            type="text" placeholder="Firma…" maxLength={200}
+            value={editForm.company}
+            onChange={(e) => setEditForm((f) => f ? { ...f, company: e.target.value } : f)}
+            className={inputCls}
+          />
+        </div>
+
+        {/* Account */}
+        {accounts.length > 0 && (
+          <div className="relative min-w-36">
+            <p className="text-[10px] uppercase tracking-[0.1em] text-stone-600 mb-1">Konto</p>
+            <select
+              value={editForm.accountId ?? ""}
+              onChange={(e) => setEditForm((f) => f ? { ...f, accountId: e.target.value ? Number(e.target.value) : null } : f)}
+              className={selectCls}
+            >
+              <option value="">Kein Konto</option>
+              {accounts.map((acc) => (
+                <option key={acc.id} value={acc.id}>{acc.icon} {acc.name}</option>
+              ))}
+            </select>
+            <ChevronDown className="absolute right-2 top-[calc(1.6rem)] w-3 h-3 text-stone-600 pointer-events-none" />
+          </div>
+        )}
+      </div>
+
+      {editError && (
+        <p className="text-red-400 text-[12px]">{editError}</p>
+      )}
+
+      {/* Save / Cancel */}
+      <div className="flex gap-2">
+        <button
+          type="button"
+          onClick={() => onSave(expenseId)}
+          disabled={editLoading}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-amber-800/50 bg-amber-950/30 text-amber-400 text-[12px] hover:bg-amber-950/50 transition-colors disabled:opacity-50"
+        >
+          {editLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Check className="w-3 h-3" />}
+          Speichern
+        </button>
+        <button
+          type="button"
+          onClick={onCancel}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-stone-800 text-stone-500 text-[12px] hover:border-stone-700 hover:text-stone-400 transition-colors"
+        >
+          <X className="w-3 h-3" />
+          Abbrechen
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export function ExpensesTable() {
   const { categories } = useCategories();
+  const { accounts } = useAccounts();
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("all");
   const [sortBy, setSortBy] = useState<"date" | "amount">("date");
   const [sortDir, setSortDir] = useState<"desc" | "asc">("desc");
-  const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
   const [deletingId, setDeletingId] = useState<number | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<number | null>(null);
 
+  // Inline edit state
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [editForm, setEditForm] = useState<EditForm | null>(null);
+  const [editLoading, setEditLoading] = useState(false);
+  const [editError, setEditError] = useState("");
+
   // Date filter
   const [dateMode, setDateMode] = useState<DateMode>("month");
-  const [selectedMonth, setSelectedMonth] = useState(currentYearMonth()); // "YYYY-MM"
+  const [selectedMonth, setSelectedMonth] = useState(currentYearMonth());
   const [rangeFrom, setRangeFrom] = useState("");
   const [rangeTo, setRangeTo] = useState("");
 
@@ -97,6 +284,59 @@ export function ExpensesTable() {
 
   const total = sorted.reduce((sum, e) => sum + e.amount, 0);
 
+  function startEdit(expense: Expense) {
+    setEditingId(expense.id);
+    setEditError("");
+    setEditForm({
+      amount: expense.amount.toString(),
+      category: expense.category ?? "",
+      date: expense.date,
+      note: expense.note ?? "",
+      company: expense.company ?? "",
+      accountId: expense.account_id ?? null,
+      type: expense.type as EntryType,
+    });
+  }
+
+  function cancelEdit() {
+    setEditingId(null);
+    setEditForm(null);
+    setEditError("");
+  }
+
+  async function saveEdit(id: number) {
+    if (!editForm) return;
+    setEditError("");
+    if (!editForm.amount || !editForm.date) { setEditError("Betrag und Datum sind Pflichtfelder."); return; }
+    if (Number(editForm.amount) <= 0) { setEditError("Betrag muss größer als 0 sein."); return; }
+    if (editForm.type === "expense" && !editForm.category) { setEditError("Bitte wähle eine Kategorie aus."); return; }
+
+    setEditLoading(true);
+    try {
+      const res = await fetch(`/api/expenses/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          amount:     Number(editForm.amount),
+          category:   editForm.category || "",
+          date:       editForm.date,
+          note:       editForm.note || null,
+          company:    editForm.company || null,
+          type:       editForm.type,
+          account_id: editForm.accountId,
+        }),
+      });
+      if (!res.ok) { const d = await res.json(); throw new Error(d.error || "Fehler"); }
+      setEditingId(null);
+      setEditForm(null);
+      fetchExpenses();
+    } catch (err) {
+      setEditError(err instanceof Error ? err.message : "Unbekannter Fehler");
+    } finally {
+      setEditLoading(false);
+    }
+  }
+
   async function handleDelete(id: number) {
     setDeletingId(id);
     try {
@@ -148,7 +388,7 @@ export function ExpensesTable() {
               value={category}
               onChange={(e) => setCategory(e.target.value)}
               className={cn(
-                "appearance-none bg-transparent border border-stone-800 rounded-md pl-3 pr-8 py-2",
+                "appearance-none bg-stone-950 border border-stone-800 rounded-md pl-3 pr-8 py-2",
                 "text-[13px] text-stone-400 [color-scheme:dark] w-full sm:min-w-40",
                 "focus:outline-none focus:border-amber-700/50 transition-colors cursor-pointer"
               )}
@@ -168,15 +408,12 @@ export function ExpensesTable() {
 
         {/* Row 2: date filter */}
         <div className="flex items-center gap-2 flex-wrap">
-          {/* Mode toggle */}
           <div className="flex rounded-md border border-stone-800 overflow-hidden text-[12px]">
             <button
               onClick={() => setDateMode("month")}
               className={cn(
                 "px-3 py-1.5 transition-colors",
-                dateMode === "month"
-                  ? "bg-stone-800 text-stone-200"
-                  : "text-stone-600 hover:text-stone-400"
+                dateMode === "month" ? "bg-stone-800 text-stone-200" : "text-stone-600 hover:text-stone-400"
               )}
             >
               Monat
@@ -185,9 +422,7 @@ export function ExpensesTable() {
               onClick={() => setDateMode("range")}
               className={cn(
                 "px-3 py-1.5 transition-colors border-l border-stone-800",
-                dateMode === "range"
-                  ? "bg-stone-800 text-stone-200"
-                  : "text-stone-600 hover:text-stone-400"
+                dateMode === "range" ? "bg-stone-800 text-stone-200" : "text-stone-600 hover:text-stone-400"
               )}
             >
               Zeitraum
@@ -233,8 +468,7 @@ export function ExpensesTable() {
           ) : (
             <div className="flex items-center gap-2 flex-wrap">
               <input
-                type="date"
-                value={rangeFrom}
+                type="date" value={rangeFrom}
                 onChange={(e) => setRangeFrom(e.target.value)}
                 className={cn(
                   "bg-transparent border border-stone-800 rounded-md px-3 py-1.5",
@@ -244,8 +478,7 @@ export function ExpensesTable() {
               />
               <span className="text-stone-600 text-[12px]">bis</span>
               <input
-                type="date"
-                value={rangeTo}
+                type="date" value={rangeTo}
                 onChange={(e) => setRangeTo(e.target.value)}
                 className={cn(
                   "bg-transparent border border-stone-800 rounded-md px-3 py-1.5",
@@ -254,10 +487,7 @@ export function ExpensesTable() {
                 )}
               />
               {(rangeFrom || rangeTo) && (
-                <button
-                  onClick={() => { setRangeFrom(""); setRangeTo(""); }}
-                  className="text-stone-600 hover:text-stone-400 transition-colors"
-                >
+                <button onClick={() => { setRangeFrom(""); setRangeTo(""); }} className="text-stone-600 hover:text-stone-400 transition-colors">
                   <X className="w-3.5 h-3.5" />
                 </button>
               )}
@@ -294,6 +524,26 @@ export function ExpensesTable() {
             {sorted.map((expense) => {
               const isIncome = expense.type === "income";
               const cat = isIncome ? null : resolveCategory(categories, expense.category);
+              const isEditing = expense.id === editingId;
+
+              if (isEditing && editForm) {
+                return (
+                  <div key={expense.id} className="px-4 py-4 bg-stone-900/30">
+                    <InlineEditForm
+                      expenseId={expense.id}
+                      editForm={editForm!}
+                      editError={editError}
+                      editLoading={editLoading}
+                      categories={categories}
+                      accounts={accounts}
+                      setEditForm={setEditForm}
+                      onSave={saveEdit}
+                      onCancel={cancelEdit}
+                    />
+                  </div>
+                );
+              }
+
               return (
                 <div key={expense.id} className="flex items-center gap-3 px-4 py-3.5">
                   {/* Icon */}
@@ -334,7 +584,7 @@ export function ExpensesTable() {
                     </span>
                     <div className="flex items-center gap-0.5">
                       <button
-                        onClick={() => setEditingExpense(expense)}
+                        onClick={() => startEdit(expense)}
                         className="w-7 h-7 rounded flex items-center justify-center text-stone-600 hover:text-stone-300 hover:bg-stone-800/60 transition-colors tap-target"
                       >
                         <Pencil className="w-3.5 h-3.5" />
@@ -403,6 +653,28 @@ export function ExpensesTable() {
                 {sorted.map((expense) => {
                   const isIncome = expense.type === "income";
                   const cat = isIncome ? null : resolveCategory(categories, expense.category);
+                  const isEditing = expense.id === editingId;
+
+                  if (isEditing && editForm) {
+                    return (
+                      <tr key={expense.id} className="border-b border-stone-900/70 last:border-0 bg-stone-900/20">
+                        <td colSpan={6} className="px-5 py-4">
+                          <InlineEditForm
+                      expenseId={expense.id}
+                      editForm={editForm!}
+                      editError={editError}
+                      editLoading={editLoading}
+                      categories={categories}
+                      accounts={accounts}
+                      setEditForm={setEditForm}
+                      onSave={saveEdit}
+                      onCancel={cancelEdit}
+                    />
+                        </td>
+                      </tr>
+                    );
+                  }
+
                   return (
                     <tr
                       key={expense.id}
@@ -456,7 +728,7 @@ export function ExpensesTable() {
                       <td className="px-4 py-3.5">
                         <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                           <button
-                            onClick={() => setEditingExpense(expense)}
+                            onClick={() => startEdit(expense)}
                             className="w-6 h-6 rounded flex items-center justify-center text-stone-600 hover:text-stone-300 hover:bg-stone-800/60 transition-colors"
                           >
                             <Pencil className="w-3 h-3" />
@@ -478,51 +750,7 @@ export function ExpensesTable() {
         </>
       )}
 
-      {/* Edit Modal — centered on desktop, bottom sheet on mobile */}
-      {editingExpense && createPortal(
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4">
-          <div
-            className="absolute inset-0 bg-black/80 backdrop-blur-md"
-            onClick={() => setEditingExpense(null)}
-          />
-          <div className="relative w-full sm:max-w-lg animate-scale-in">
-            <div className="glass-card p-5 rounded-t-2xl sm:rounded-xl">
-              {/* Drag handle (mobile only) */}
-              <div className="sm:hidden w-10 h-1 bg-stone-700 rounded-full mx-auto mb-4" />
-              <div className="flex items-center justify-between mb-5">
-                <p className="text-[11px] uppercase tracking-[0.1em] text-stone-500">
-                  Bearbeiten
-                </p>
-                <button
-                  onClick={() => setEditingExpense(null)}
-                  className="w-7 h-7 rounded-md bg-stone-900 hover:bg-stone-800 flex items-center justify-center text-stone-500 hover:text-stone-300 transition-colors"
-                >
-                  <X className="w-3.5 h-3.5" />
-                </button>
-              </div>
-              <AddExpenseForm
-                expenseId={editingExpense.id}
-                initialData={{
-                  amount: editingExpense.amount.toString(),
-                  category: editingExpense.category,
-                  date: editingExpense.date,
-                  note: editingExpense.note ?? "",
-                  company: editingExpense.company ?? "",
-                  type: editingExpense.type,
-                  accountId: editingExpense.account_id,
-                }}
-                onSuccess={() => {
-                  setEditingExpense(null);
-                  fetchExpenses();
-                }}
-              />
-            </div>
-          </div>
-        </div>,
-        document.body
-      )}
-
-      {/* Delete Confirm — centered on desktop, bottom sheet on mobile */}
+      {/* Delete Confirm */}
       {deleteConfirm !== null && createPortal(
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4">
           <div
@@ -530,19 +758,14 @@ export function ExpensesTable() {
             onClick={() => setDeleteConfirm(null)}
           />
           <div className="relative glass-card p-6 w-full sm:max-w-sm animate-scale-in rounded-t-2xl sm:rounded-xl">
-            {/* Drag handle (mobile only) */}
             <div className="sm:hidden w-10 h-1 bg-stone-700 rounded-full mx-auto mb-4" />
             <div className="flex items-start gap-3 mb-5">
               <div className="w-9 h-9 rounded-lg bg-red-950/50 border border-red-900/40 flex items-center justify-center flex-shrink-0 mt-0.5">
                 <AlertTriangle className="w-4 h-4 text-red-500/80" />
               </div>
               <div>
-                <p className="text-[13px] font-medium text-stone-200 mb-1">
-                  Eintrag löschen?
-                </p>
-                <p className="text-[12px] text-stone-600">
-                  Diese Aktion kann nicht rückgängig gemacht werden.
-                </p>
+                <p className="text-[13px] font-medium text-stone-200 mb-1">Eintrag löschen?</p>
+                <p className="text-[12px] text-stone-600">Diese Aktion kann nicht rückgängig gemacht werden.</p>
               </div>
             </div>
             <div className="flex gap-2">
@@ -557,11 +780,7 @@ export function ExpensesTable() {
                 disabled={deletingId !== null}
                 className="flex-1 py-2.5 rounded-lg border border-red-900/50 bg-red-950/30 text-red-400 text-[13px] hover:bg-red-950/50 transition-colors flex items-center justify-center gap-1.5 disabled:opacity-50"
               >
-                {deletingId ? (
-                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                ) : (
-                  <Trash2 className="w-3.5 h-3.5" />
-                )}
+                {deletingId ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
                 Löschen
               </button>
             </div>
