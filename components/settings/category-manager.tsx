@@ -372,7 +372,7 @@ function SavingsEntries({ categoryId, color }: { categoryId: string; color: stri
           </span>
           <span className="text-[12px] text-stone-500 flex-1 truncate">{e.note || "–"}</span>
           <button onClick={() => handleDelete(e.id)}
-            className="sm:opacity-0 sm:group-hover:opacity-100 w-7 h-7 flex items-center justify-center text-stone-700 hover:text-red-400 transition-all tap-target">
+            className="w-7 h-7 flex items-center justify-center text-stone-700 hover:text-red-400 transition-all tap-target">
             <Trash2 className="w-3 h-3" />
           </button>
         </div>
@@ -480,22 +480,22 @@ export function CategoryManager({ monthSpending }: { monthSpending: Record<strin
                 <div className="flex items-center gap-1 flex-shrink-0">
                   {hasSaving && (
                     <button onClick={() => setExpandedSavings(isExpanded ? null : cat.id)}
-                      className="w-7 h-7 rounded flex items-center justify-center text-stone-600 hover:text-violet-400 hover:bg-violet-950/40 transition-colors sm:opacity-0 sm:group-hover:opacity-100 tap-target">
+                      className="w-7 h-7 rounded flex items-center justify-center text-stone-600 hover:text-violet-400 hover:bg-violet-950/40 transition-colors tap-target">
                       {isExpanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
                     </button>
                   )}
                   {hasSaving && (
                     <button onClick={() => setDepositTarget(cat)}
-                      className="w-7 h-7 rounded flex items-center justify-center text-stone-600 hover:text-violet-400 hover:bg-violet-950/40 transition-colors sm:opacity-0 sm:group-hover:opacity-100 tap-target">
+                      className="w-7 h-7 rounded flex items-center justify-center text-stone-600 hover:text-violet-400 hover:bg-violet-950/40 transition-colors tap-target">
                       <PiggyBank className="w-3.5 h-3.5" />
                     </button>
                   )}
                   <button onClick={() => setModal(cat)}
-                    className="w-7 h-7 rounded flex items-center justify-center text-stone-600 hover:text-stone-300 hover:bg-stone-800/60 transition-colors sm:opacity-0 sm:group-hover:opacity-100 tap-target">
+                    className="w-7 h-7 rounded flex items-center justify-center text-stone-600 hover:text-stone-300 hover:bg-stone-800/60 transition-colors tap-target">
                     <Pencil className="w-3.5 h-3.5" />
                   </button>
                   <button onClick={() => setDeleteTarget(cat)}
-                    className="w-7 h-7 rounded flex items-center justify-center text-stone-600 hover:text-red-400 hover:bg-red-950/40 transition-colors sm:opacity-0 sm:group-hover:opacity-100 tap-target">
+                    className="w-7 h-7 rounded flex items-center justify-center text-stone-600 hover:text-red-400 hover:bg-red-950/40 transition-colors tap-target">
                     <Trash2 className="w-3.5 h-3.5" />
                   </button>
                 </div>

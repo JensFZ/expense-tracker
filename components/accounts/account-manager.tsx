@@ -568,16 +568,16 @@ export function AccountManager({ initialAccounts }: { initialAccounts: AccountWi
                           </p>
                           <div className="flex items-center gap-0.5">
                             <button onClick={() => setReconciling(account)}
-                              className="w-7 h-7 rounded flex items-center justify-center text-stone-600 hover:text-amber-400 hover:bg-amber-950/40 transition-colors sm:opacity-0 sm:group-hover:opacity-100 tap-target"
+                              className="w-7 h-7 rounded flex items-center justify-center text-stone-600 hover:text-amber-400 hover:bg-amber-950/40 transition-colors tap-target"
                               title="Abgleichen">
                               <Scale className="w-3.5 h-3.5" />
                             </button>
                             <button onClick={() => setModal(account)}
-                              className="w-7 h-7 rounded flex items-center justify-center text-stone-600 hover:text-stone-300 hover:bg-stone-800/60 transition-colors sm:opacity-0 sm:group-hover:opacity-100 tap-target">
+                              className="w-7 h-7 rounded flex items-center justify-center text-stone-600 hover:text-stone-300 hover:bg-stone-800/60 transition-colors tap-target">
                               <Pencil className="w-3.5 h-3.5" />
                             </button>
                             <button onClick={() => handleToggle(account)} disabled={togglingId === account.id}
-                              className="w-7 h-7 rounded flex items-center justify-center text-stone-600 hover:text-stone-400 hover:bg-stone-800/60 transition-colors sm:opacity-0 sm:group-hover:opacity-100 tap-target">
+                              className="w-7 h-7 rounded flex items-center justify-center text-stone-600 hover:text-stone-400 hover:bg-stone-800/60 transition-colors tap-target">
                               {togglingId === account.id
                                 ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
                                 : account.is_active === 1
@@ -585,7 +585,7 @@ export function AccountManager({ initialAccounts }: { initialAccounts: AccountWi
                                 : <ToggleLeft className="w-3.5 h-3.5" />}
                             </button>
                             <button onClick={() => setDeleteTarget(account)}
-                              className="w-7 h-7 rounded flex items-center justify-center text-stone-600 hover:text-red-400 hover:bg-red-950/40 transition-colors sm:opacity-0 sm:group-hover:opacity-100 tap-target">
+                              className="w-7 h-7 rounded flex items-center justify-center text-stone-600 hover:text-red-400 hover:bg-red-950/40 transition-colors tap-target">
                               <Trash2 className="w-3.5 h-3.5" />
                             </button>
                           </div>

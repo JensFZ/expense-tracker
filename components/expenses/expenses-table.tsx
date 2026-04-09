@@ -726,7 +726,7 @@ export function ExpensesTable() {
                         </span>
                       </td>
                       <td className="px-4 py-3.5">
-                        <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <div className="flex items-center justify-end gap-1">
                           <button
                             onClick={() => startEdit(expense)}
                             className="w-6 h-6 rounded flex items-center justify-center text-stone-600 hover:text-stone-300 hover:bg-stone-800/60 transition-colors"

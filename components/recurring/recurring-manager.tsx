@@ -540,11 +540,11 @@ export function RecurringManager({
               </button>
 
               <button onClick={() => setModal(entry)}
-                className="w-7 h-7 rounded flex items-center justify-center text-stone-600 hover:text-stone-300 hover:bg-stone-800/60 transition-colors sm:opacity-0 sm:group-hover:opacity-100 tap-target">
+                className="w-7 h-7 rounded flex items-center justify-center text-stone-600 hover:text-stone-300 hover:bg-stone-800/60 transition-colors tap-target">
                 <Pencil className="w-3.5 h-3.5" />
               </button>
               <button onClick={() => setDeleteTarget(entry)}
-                className="w-7 h-7 rounded flex items-center justify-center text-stone-600 hover:text-red-400 hover:bg-red-950/40 transition-colors sm:opacity-0 sm:group-hover:opacity-100 tap-target">
+                className="w-7 h-7 rounded flex items-center justify-center text-stone-600 hover:text-red-400 hover:bg-red-950/40 transition-colors tap-target">
                 <Trash2 className="w-3.5 h-3.5" />
               </button>
             </div>
