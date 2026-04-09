@@ -45,8 +45,10 @@ COPY --from=builder   --chown=nextjs:nodejs /app/public           ./public
 # Tesseract-Sprachdaten einbetten
 COPY --from=tessdata --chown=nextjs:nodejs /tessdata ./tessdata
 
-# Vollständiges tesseract.js-Paket kopieren (standalone-Trace erfasst den Worker-Prozess nicht)
-COPY --from=builder --chown=nextjs:nodejs /app/node_modules/tesseract.js ./node_modules/tesseract.js
+# Vollständige node_modules übernehmen — tesseract.js nutzt dynamische requires im Worker-Prozess,
+# die der standalone-Tracer nicht erfasst (bmp-js, jimp, etc.). Einzelne Pakete nachzupflegen
+# wäre Whack-a-Mole; die kompletten node_modules lösen das zuverlässig.
+COPY --from=builder --chown=nextjs:nodejs /app/node_modules ./node_modules
 
 # Datenverzeichnis anlegen (wird als Volume eingebunden)
 RUN mkdir -p /app/data && chown nextjs:nodejs /app/data
