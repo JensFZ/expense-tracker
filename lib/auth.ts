@@ -37,10 +37,18 @@ export async function signToken(payload: SessionPayload): Promise<string> {
     .sign(getJwtSecret());
 }
 
-export async function verifyToken(token: string): Promise<SessionPayload | null> {
+export async function signPending2faToken(userId: number, username: string): Promise<string> {
+  return new SignJWT({ userId, username, pending2fa: true })
+    .setProtectedHeader({ alg: "HS256" })
+    .setIssuedAt()
+    .setExpirationTime("5m")
+    .sign(getJwtSecret());
+}
+
+export async function verifyToken(token: string): Promise<(SessionPayload & { pending2fa?: boolean }) | null> {
   try {
     const { payload } = await jwtVerify(token, getJwtSecret());
-    return payload as unknown as SessionPayload;
+    return payload as unknown as SessionPayload & { pending2fa?: boolean };
   } catch {
     return null;
   }

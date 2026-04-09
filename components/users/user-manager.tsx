@@ -11,7 +11,7 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { User, UserPlus, Pencil, Trash2, Eye, EyeOff } from "lucide-react";
+import { User, UserPlus, Pencil, Trash2, Eye, EyeOff, ShieldCheck, ShieldOff, ShieldAlert } from "lucide-react";
 import type { User as UserType } from "@/lib/db";
 
 interface Props {
@@ -37,6 +37,16 @@ export function UserManager({ initialUsers }: Props) {
   const [loading, setLoading] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<UserType | null>(null);
 
+  // 2FA state
+  const [totpTarget, setTotpTarget] = useState<UserType | null>(null);
+  const [totpStep, setTotpStep] = useState<"setup" | "confirm" | "disable">("setup");
+  const [totpQr, setTotpQr] = useState<string | null>(null);
+  const [totpSecret, setTotpSecret] = useState<string | null>(null);
+  const [totpCode, setTotpCode] = useState("");
+  const [totpPassword, setTotpPassword] = useState("");
+  const [totpError, setTotpError] = useState<string | null>(null);
+  const [totpLoading, setTotpLoading] = useState(false);
+
   function update(field: string, value: string) {
     setForm((f) => ({ ...f, [field]: value }));
     setError(null);
@@ -56,6 +66,89 @@ export function UserManager({ initialUsers }: Props) {
     setError(null);
     setEditTarget(u);
     setDialogMode("edit");
+  }
+
+  async function openTotpSetup(u: UserType) {
+    setTotpTarget(u);
+    setTotpCode("");
+    setTotpPassword("");
+    setTotpError(null);
+    setTotpQr(null);
+    setTotpSecret(null);
+    if (u.totp_enabled) {
+      setTotpStep("disable");
+    } else {
+      setTotpStep("setup");
+      setTotpLoading(true);
+      try {
+        const res = await fetch("/api/auth/totp/setup", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ userId: u.id }),
+        });
+        const data = await res.json();
+        if (!res.ok) { setTotpError(data.error); return; }
+        setTotpQr(data.qrDataUrl);
+        setTotpSecret(data.secret);
+        setTotpStep("confirm");
+      } catch {
+        setTotpError("Fehler beim Generieren des Codes.");
+      } finally {
+        setTotpLoading(false);
+      }
+    }
+  }
+
+  async function handleTotpEnable(e: React.FormEvent) {
+    e.preventDefault();
+    setTotpError(null);
+    setTotpLoading(true);
+    try {
+      const res = await fetch("/api/auth/totp/enable", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId: totpTarget!.id, code: totpCode }),
+      });
+      const data = await res.json();
+      if (!res.ok) { setTotpError(data.error); setTotpCode(""); return; }
+      await reloadUsers();
+      closeTotpDialog();
+    } finally {
+      setTotpLoading(false);
+    }
+  }
+
+  async function handleTotpDisable(e: React.FormEvent) {
+    e.preventDefault();
+    setTotpError(null);
+    setTotpLoading(true);
+    try {
+      const res = await fetch("/api/auth/totp/disable", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId: totpTarget!.id, password: totpPassword }),
+      });
+      const data = await res.json();
+      if (!res.ok) { setTotpError(data.error); return; }
+      await reloadUsers();
+      closeTotpDialog();
+    } finally {
+      setTotpLoading(false);
+    }
+  }
+
+  function closeTotpDialog() {
+    setTotpTarget(null);
+    setTotpQr(null);
+    setTotpSecret(null);
+    setTotpCode("");
+    setTotpPassword("");
+    setTotpError(null);
+  }
+
+  async function reloadUsers() {
+    const list = await fetch("/api/users").then((r) => r.json());
+    setUsers(list);
   }
 
   async function handleSave(e: React.FormEvent<HTMLFormElement>) {
@@ -91,9 +184,7 @@ export function UserManager({ initialUsers }: Props) {
         setError(data.error ?? "Fehler beim Speichern.");
         return;
       }
-      // Refresh list
-      const list = await fetch("/api/users").then((r) => r.json());
-      setUsers(list);
+      await reloadUsers();
       setDialogMode(null);
     } finally {
       setLoading(false);
@@ -141,12 +232,26 @@ export function UserManager({ initialUsers }: Props) {
                 <p className="text-[13px] font-medium text-stone-200 truncate">
                   {u.first_name} {u.last_name}
                 </p>
-                <p className="text-[11px] text-stone-500 truncate">
+                <p className="text-[11px] text-stone-500 truncate flex items-center gap-1.5">
                   @{u.username} · {u.email}
+                  {u.totp_enabled ? (
+                    <span className="inline-flex items-center gap-0.5 text-emerald-500/80">
+                      <ShieldCheck className="w-3 h-3" /> 2FA
+                    </span>
+                  ) : null}
                 </p>
               </div>
             </div>
             <div className="flex items-center gap-1 flex-shrink-0 ml-3">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => openTotpSetup(u)}
+                className={`h-7 w-7 p-0 ${u.totp_enabled ? "text-emerald-500 hover:text-emerald-300 hover:bg-emerald-500/10" : "text-stone-600 hover:text-stone-300"}`}
+                title={u.totp_enabled ? "2FA deaktivieren" : "2FA aktivieren"}
+              >
+                {u.totp_enabled ? <ShieldCheck className="w-3.5 h-3.5" /> : <ShieldAlert className="w-3.5 h-3.5" />}
+              </Button>
               <Button variant="ghost" size="sm" onClick={() => openEdit(u)} className="h-7 w-7 p-0">
                 <Pencil className="w-3.5 h-3.5" />
               </Button>
@@ -221,6 +326,96 @@ export function UserManager({ initialUsers }: Props) {
               <Button type="submit" disabled={loading}>{loading ? "Speichern…" : "Speichern"}</Button>
             </DialogFooter>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* 2FA Dialog */}
+      <Dialog open={totpTarget !== null} onOpenChange={(open) => !open && closeTotpDialog()}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              {totpStep === "disable"
+                ? <><ShieldOff className="w-4 h-4 text-red-400" /> 2FA deaktivieren</>
+                : <><ShieldCheck className="w-4 h-4 text-emerald-400" /> 2FA aktivieren</>
+              }
+            </DialogTitle>
+          </DialogHeader>
+
+          {totpLoading && totpStep === "setup" ? (
+            <div className="flex items-center justify-center py-8">
+              <div className="w-6 h-6 rounded-full border-2 border-amber-500/30 border-t-amber-500 animate-spin" />
+            </div>
+          ) : totpStep === "confirm" ? (
+            <form onSubmit={handleTotpEnable} className="space-y-4">
+              <p className="text-[13px] text-stone-400">
+                Scanne den QR-Code mit deiner Authenticator-App (z.B. Google Authenticator, Authy).
+              </p>
+              {totpQr && (
+                <div className="flex justify-center">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={totpQr} alt="2FA QR-Code" className="rounded-lg border border-stone-800 bg-white p-1" width={200} height={200} />
+                </div>
+              )}
+              {totpSecret && (
+                <div className="rounded-md bg-stone-900 border border-stone-800 px-3 py-2 text-center">
+                  <p className="text-[10px] text-stone-600 uppercase tracking-wider mb-1">Manueller Schlüssel</p>
+                  <code className="text-[12px] text-amber-400 tracking-widest break-all">{totpSecret}</code>
+                </div>
+              )}
+              <div className="space-y-1.5">
+                <Label htmlFor="totp-confirm-code">Code zur Bestätigung</Label>
+                <Input
+                  id="totp-confirm-code"
+                  value={totpCode}
+                  onChange={(e) => { setTotpCode(e.target.value.replace(/\D/g, "").slice(0, 6)); setTotpError(null); }}
+                  placeholder="000000"
+                  inputMode="numeric"
+                  autoComplete="one-time-code"
+                  className="text-center text-lg tracking-[0.3em] font-numbers"
+                  maxLength={6}
+                  autoFocus
+                  required
+                />
+              </div>
+              {totpError && (
+                <p className="text-sm text-red-400 bg-red-400/10 border border-red-400/20 rounded-md px-3 py-2">{totpError}</p>
+              )}
+              <DialogFooter>
+                <Button type="button" variant="ghost" onClick={closeTotpDialog}>Abbrechen</Button>
+                <Button type="submit" disabled={totpLoading || totpCode.length !== 6} className="gap-1.5">
+                  <ShieldCheck className="w-4 h-4" />
+                  {totpLoading ? "Prüfen…" : "Aktivieren"}
+                </Button>
+              </DialogFooter>
+            </form>
+          ) : (
+            <form onSubmit={handleTotpDisable} className="space-y-4">
+              <p className="text-[13px] text-stone-400">
+                Gib das Passwort von <strong className="text-stone-200">{totpTarget?.username}</strong> ein, um die Zwei-Faktor-Authentifizierung zu deaktivieren.
+              </p>
+              <div className="space-y-1.5">
+                <Label htmlFor="totp-disable-pw">Passwort</Label>
+                <Input
+                  id="totp-disable-pw"
+                  type="password"
+                  value={totpPassword}
+                  onChange={(e) => { setTotpPassword(e.target.value); setTotpError(null); }}
+                  autoFocus
+                  required
+                />
+              </div>
+              {totpError && (
+                <p className="text-sm text-red-400 bg-red-400/10 border border-red-400/20 rounded-md px-3 py-2">{totpError}</p>
+              )}
+              <DialogFooter>
+                <Button type="button" variant="ghost" onClick={closeTotpDialog}>Abbrechen</Button>
+                <Button type="submit" variant="destructive" disabled={totpLoading || !totpPassword} className="gap-1.5">
+                  <ShieldOff className="w-4 h-4" />
+                  {totpLoading ? "Deaktivieren…" : "Deaktivieren"}
+                </Button>
+              </DialogFooter>
+            </form>
+          )}
         </DialogContent>
       </Dialog>
 

@@ -64,11 +64,13 @@ export interface User {
   first_name: string;
   last_name: string;
   email: string;
+  totp_enabled: number; // 0 | 1
   created_at: string;
 }
 
 export interface UserWithHash extends User {
   password_hash: string;
+  totp_secret: string | null;
 }
 
 let db: Database.Database | null = null;
@@ -145,6 +147,8 @@ function getDb(): Database.Database {
       first_name    TEXT    NOT NULL DEFAULT '',
       last_name     TEXT    NOT NULL DEFAULT '',
       email         TEXT    NOT NULL DEFAULT '',
+      totp_secret   TEXT,
+      totp_enabled  INTEGER NOT NULL DEFAULT 0,
       created_at    TEXT    DEFAULT (datetime('now'))
     );
   `);
@@ -174,6 +178,13 @@ function getDb(): Database.Database {
   }
   if (!cols.includes("company")) {
     db.exec("ALTER TABLE expenses ADD COLUMN company TEXT");
+  }
+  const userCols = new Set((db.prepare("PRAGMA table_info(users)").all() as { name: string }[]).map((c) => c.name));
+  if (!userCols.has("totp_secret")) {
+    db.exec("ALTER TABLE users ADD COLUMN totp_secret TEXT");
+  }
+  if (!userCols.has("totp_enabled")) {
+    db.exec("ALTER TABLE users ADD COLUMN totp_enabled INTEGER NOT NULL DEFAULT 0");
   }
 
   // Seed default categories if empty
@@ -512,13 +523,13 @@ export function getUserCount(): number {
 
 export function getAllUsers(): User[] {
   return getDb()
-    .prepare("SELECT id, username, first_name, last_name, email, created_at FROM users ORDER BY id ASC")
+    .prepare("SELECT id, username, first_name, last_name, email, totp_enabled, created_at FROM users ORDER BY id ASC")
     .all() as User[];
 }
 
 export function getUserById(id: number): User | undefined {
   return getDb()
-    .prepare("SELECT id, username, first_name, last_name, email, created_at FROM users WHERE id = ?")
+    .prepare("SELECT id, username, first_name, last_name, email, totp_enabled, created_at FROM users WHERE id = ?")
     .get(id) as User | undefined;
 }
 
@@ -560,8 +571,20 @@ export function deleteUser(id: number): boolean {
   return getDb().prepare("DELETE FROM users WHERE id = ?").run(id).changes > 0;
 }
 
-export function verifyUserPassword(username: string, password: string): User | null {
+export function verifyUserPassword(username: string, password: string): UserWithHash | null {
   const user = getUserByUsername(username);
   if (!user) return null;
-  return bcrypt.compareSync(password, user.password_hash) ? getUserById(user.id)! : null;
+  return bcrypt.compareSync(password, user.password_hash) ? user : null;
+}
+
+export function setUserTotpSecret(id: number, secret: string): void {
+  getDb().prepare("UPDATE users SET totp_secret = ?, totp_enabled = 0 WHERE id = ?").run(secret, id);
+}
+
+export function enableUserTotp(id: number): void {
+  getDb().prepare("UPDATE users SET totp_enabled = 1 WHERE id = ?").run(id);
+}
+
+export function disableUserTotp(id: number): void {
+  getDb().prepare("UPDATE users SET totp_secret = NULL, totp_enabled = 0 WHERE id = ?").run(id);
 }
