@@ -114,7 +114,7 @@ export function AddExpenseForm({
     try {
       const body = new FormData();
       body.append("image", file);
-      const res  = await fetch("/api/receipt-scan", { method: "POST", body });
+      const res  = await fetch("/api/receipt-scan", { method: "POST", body, signal: AbortSignal.timeout(60_000) });
       if (!res.ok) throw new Error();
       const data = await res.json() as { amount: number | null; company: string | null };
       if (data.amount !== null) setForm((f) => ({ ...f, amount: String(data.amount) }));

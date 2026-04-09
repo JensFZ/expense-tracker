@@ -97,10 +97,13 @@ export async function POST(request: Request) {
 
     let text = "";
     try {
-      const { data } = await worker.recognize(buffer);
+      const timeout = new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error("OCR timeout")), 55_000)
+      );
+      const { data } = await Promise.race([worker.recognize(buffer), timeout]);
       text = data.text;
     } finally {
-      await worker.terminate();
+      await worker.terminate().catch(() => {});
     }
 
     const amount  = extractAmount(text);
