@@ -12,9 +12,9 @@ const navItems = [
   { href: "/add",       label: "Neu",         icon: PlusCircle,      mobileVisible: true  },
   { href: "/expenses",  label: "Ausgaben",    icon: List,            mobileVisible: true  },
   { href: "/recurring", label: "Regelmäßig",  icon: Repeat,          mobileVisible: true  },
-  { href: "/accounts",  label: "Konten",      icon: Landmark,        mobileVisible: false },
+  { href: "/accounts",  label: "Konten",      icon: Landmark,        mobileVisible: true  },
   { href: "/settings",  label: "Kategorien",  icon: Settings,        mobileVisible: true  },
-  { href: "/users",     label: "Benutzer",    icon: Users,           mobileVisible: false },
+  { href: "/users",     label: "Benutzer",    icon: Users,           mobileVisible: true  },
 ];
 
 export function Nav() {
