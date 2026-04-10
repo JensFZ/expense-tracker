@@ -5,7 +5,7 @@ import { Expense } from "@/lib/db";
 import { Category } from "@/lib/categories";
 import { AccountWithBalance } from "@/lib/db";
 import { cn } from "@/lib/utils";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronDown, ChevronLeft, ChevronRight } from "lucide-react";
 import { StatsCards }         from "@/components/dashboard/stats-cards";
 import { CategoryPieChart }   from "@/components/dashboard/category-pie-chart";
 import { MonthlyBarChart }    from "@/components/dashboard/monthly-bar-chart";
@@ -103,6 +103,7 @@ export function DashboardClient({ monthlyData, categories, savingsTotal, account
   const [income, setIncome]             = useState<Expense[]>([]);
   const [savingsThisMonth, setSavingsThisMonth] = useState<Record<string, number>>({});
   const [loading, setLoading]           = useState(true);
+  const [mottoOpen, setMottoOpen]       = useState(true);
 
   const getDateRange = useCallback((): { from: string; to: string } | null => {
     if (dateMode === "month") {
@@ -176,10 +177,21 @@ export function DashboardClient({ monthlyData, categories, savingsTotal, account
     <div className="space-y-7">
 
       {/* Motto des Tages */}
-      <div className="glass-card p-4 animate-fade-up border-l-2 border-amber-700/50">
-        <p className="text-[10px] uppercase tracking-[0.12em] text-amber-700/70 mb-1.5">Motto des Tages</p>
-        <p className="text-stone-300 text-[14px] leading-snug italic">&bdquo;{motto.text}&ldquo;</p>
-        <p className="text-stone-600 text-[11px] mt-1.5">— {motto.author}</p>
+      <div className="glass-card animate-fade-up border-l-2 border-amber-700/50 overflow-hidden">
+        <button
+          type="button"
+          onClick={() => setMottoOpen((o) => !o)}
+          className="w-full flex items-center justify-between px-4 py-3 text-left"
+        >
+          <p className="text-[10px] uppercase tracking-[0.12em] text-amber-700/70">Motto des Tages</p>
+          <ChevronDown className={cn("w-3.5 h-3.5 text-amber-700/50 transition-transform duration-200", mottoOpen && "rotate-180")} />
+        </button>
+        {mottoOpen && (
+          <div className="px-4 pb-3">
+            <p className="text-stone-300 text-[14px] leading-snug italic">&bdquo;{motto.text}&ldquo;</p>
+            <p className="text-stone-600 text-[11px] mt-1.5">— {motto.author}</p>
+          </div>
+        )}
       </div>
 
       {/* Header */}
