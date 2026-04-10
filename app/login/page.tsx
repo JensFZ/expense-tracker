@@ -5,7 +5,9 @@ import { useRouter } from "next/navigation";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { Eye, EyeOff, LogIn, ShieldCheck } from "lucide-react";
+import { ChevronDown, Eye, EyeOff, LogIn, ShieldCheck } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { getDailyMotto } from "@/lib/motd";
 import { SetupDialog } from "@/components/users/setup-dialog";
 
 export default function LoginPage() {
@@ -16,6 +18,8 @@ export default function LoginPage() {
   const [showPw, setShowPw] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [mottoOpen, setMottoOpen] = useState(true);
+  const motto = getDailyMotto();
 
   // 2FA step
   const [pendingToken, setPendingToken] = useState<string | null>(null);
@@ -215,6 +219,24 @@ export default function LoginPage() {
                 </Button>
               </form>
             </>
+          )}
+        </div>
+
+        {/* Motto des Tages */}
+        <div className="mt-4 border-l-2 border-amber-700/30 rounded-r-md bg-stone-950/50 backdrop-blur-sm overflow-hidden">
+          <button
+            type="button"
+            onClick={() => setMottoOpen((o) => !o)}
+            className="w-full flex items-center justify-between px-4 py-2.5 text-left"
+          >
+            <p className="text-[10px] uppercase tracking-[0.12em] text-amber-700/60">Motto des Tages</p>
+            <ChevronDown className={cn("w-3 h-3 text-amber-700/40 transition-transform duration-200", mottoOpen && "rotate-180")} />
+          </button>
+          {mottoOpen && (
+            <div className="px-4 pb-3">
+              <p className="text-stone-400 text-[13px] leading-snug italic">&bdquo;{motto.text}&ldquo;</p>
+              <p className="text-stone-600 text-[11px] mt-1.5">— {motto.author}</p>
+            </div>
           )}
         </div>
       </div>
