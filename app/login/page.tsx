@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -11,7 +10,6 @@ import { getDailyMotto } from "@/lib/motd";
 import { SetupDialog } from "@/components/users/setup-dialog";
 
 export default function LoginPage() {
-  const router = useRouter();
   const [status, setStatus] = useState<"loading" | "setup" | "login">("loading");
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -54,7 +52,7 @@ export default function LoginPage() {
         setPendingToken(data.pendingToken);
         setTotpCode("");
       } else {
-        router.push("/");
+        window.location.href = "/";
       }
     } finally {
       setLoading(false);
@@ -77,7 +75,7 @@ export default function LoginPage() {
         setTotpCode("");
         totpRef.current?.focus();
       } else {
-        router.push("/");
+        window.location.href = "/";
       }
     } catch (err) {
       setError("Verbindungsfehler. Bitte erneut versuchen.");
