@@ -55,7 +55,6 @@ export default function LoginPage() {
         setTotpCode("");
       } else {
         router.push("/");
-        router.refresh();
       }
     } finally {
       setLoading(false);
@@ -79,7 +78,6 @@ export default function LoginPage() {
         totpRef.current?.focus();
       } else {
         router.push("/");
-        router.refresh();
       }
     } catch (err) {
       setError("Verbindungsfehler. Bitte erneut versuchen.");
