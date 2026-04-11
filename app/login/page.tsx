@@ -81,6 +81,9 @@ export default function LoginPage() {
         router.push("/");
         router.refresh();
       }
+    } catch (err) {
+      setError("Verbindungsfehler. Bitte erneut versuchen.");
+      console.error("TOTP login error:", err);
     } finally {
       setLoading(false);
     }
