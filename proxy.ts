@@ -4,6 +4,7 @@ import { getSessionFromRequest } from "@/lib/auth";
 const PUBLIC_PATHS = [
   "/login",
   "/api/auth/login",
+  "/api/auth/totp/login",
   "/api/users/setup-status",
   "/api/users", // POST for first user creation
 ];
