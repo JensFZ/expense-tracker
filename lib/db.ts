@@ -275,6 +275,14 @@ export function getExpensesLast6Months(): { month: string; total: number; catego
   `).all() as { month: string; total: number; category: string }[];
 }
 
+export function getExpensesLastNMonths(n: number): { month: string; total: number; category: string }[] {
+  return getDb().prepare(`
+    SELECT strftime('%Y-%m', date) as month, category, SUM(amount) as total
+    FROM expenses WHERE type = 'expense' AND date >= date('now', '-' || ? || ' months')
+    GROUP BY month, category ORDER BY month ASC
+  `).all(n) as { month: string; total: number; category: string }[];
+}
+
 export function getMonthSpendingByCategory(): Record<string, number> {
   const now = new Date();
   const start = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-01`;
